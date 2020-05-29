@@ -13,10 +13,11 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     public Color LineColor = Color.green;
     public Color BlockedLineColor = Color.blue;
+    public Color PathNetworkLineColor = Color.white;
 
     public Material LineMaterial;        //Material used to draw the lines for the grid
 
-
+    public bool VisualizePathNetwork = false;
 
     public override void Awake()
     {
@@ -51,9 +52,17 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
         PathNodes = pathNodes;
         PathEdges = pathEdges;
 
+        PurgeOutdatedLineViz();
+
         if (grid != null)
         {
             CreateGridLines(Grid, CellSize, BottomLeftCornerWCS);
+        }
+
+        if (VisualizePathNetwork)
+        {
+            if (PathNodes != null && PathEdges != null)
+                CreateNetworkLines();
         }
 
     }
@@ -83,7 +92,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     void CreateGridLines(bool[,] grid, float cellSize, Vector2 canvas_pos)
     {
-        PurgeOutdatedLineViz();
+        //PurgeOutdatedLineViz();
 
         var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
 
@@ -120,6 +129,49 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
         }
 
 
+    }
+
+
+    void CreateNetworkLines()
+    {
+        //PurgeOutdatedLineViz();
+
+        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
+
+
+        HashSet<System.Tuple<int, int>> hs = new HashSet<System.Tuple<int, int>>();
+
+
+        if (PathEdges != null)
+        {
+            for (int i = 0; i < PathEdges.Count; ++i)
+            {
+                var pts = PathEdges[i];
+                if (pts != null)
+                {
+                    for (int j = 0; j < pts.Count; ++j)
+                    {
+                        var smaller = i;
+                        var bigger = pts[j];
+
+                        if (bigger < smaller)
+                        {
+                            var tmp = bigger;
+                            bigger = smaller;
+                            smaller = tmp;
+                        }
+
+                        var tup = new System.Tuple<int, int>(smaller, bigger);
+                        if (!hs.Contains(tup))
+                        {
+                            hs.Add(tup);
+                            Utils.DrawLine(PathNodes[i], PathNodes[pts[j]], Utils.ZOffset, parent, PathNetworkLineColor, LineMaterial);
+                        }
+
+                    }
+                }
+            }
+        }
     }
 
 
