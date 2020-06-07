@@ -24,6 +24,15 @@ namespace GameAICourse
 
             //STUDENT CODE HERE
 
+            // Uncomment the following two lines if you want to see solution output
+            // This is assuming you don't modify any of the presets provided, including dragging objects
+            // If the preset doesn't match perfectly, a null solution is presented
+
+            //HardCodedPathNetworkDemo.Create(canvasOrigin, canvasWidth, canvasHeight, obstacles, agentRadius,
+            //    pathNodes, out pathEdges);
+
+            //return;
+
             pathEdges = new List<List<int>>(pathNodes.Count);
 
             for (int i = 0; i < pathNodes.Count; ++i)
