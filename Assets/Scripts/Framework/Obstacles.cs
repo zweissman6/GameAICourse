@@ -40,6 +40,7 @@ public class Obstacles : MonoBehaviour
     }
     void CollectCubesAndPolygons()
     {
+        polygons = new List<Polygon>();
         obstacles = new List<Obstacle>();
         //all the polygons associated with obstacles
         Obstacle[] pg = ObstaclesGroup.GetComponentsInChildren<Obstacle>();

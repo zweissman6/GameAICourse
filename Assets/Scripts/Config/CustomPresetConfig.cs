@@ -7,12 +7,35 @@ public class CustomPresetConfig : PresetConfig
 
     void Awake()
     {
+        SceneConfigs.Add(SC0());
         SceneConfigs.Add(SC1());
         SceneConfigs.Add(SC2());
         SceneConfigs.Add(SC3());
         SceneConfigs.Add(SC4());
         SceneConfigs.Add(SC5());
         SceneConfigs.Add(SC6());
+
+    }
+
+    SceneConfig SC0()
+    {
+
+        List<ObstacleConfig> obstacleConfigs = new List<ObstacleConfig>();
+
+        obstacleConfigs.Add(new ObstacleConfig(ObstacleType.Cube, new Vector2(0f, 0f), new Vector2(1.2f, 1.2f), 0f));
+        //obstacleConfigs.Add(new ObstacleConfig(ObstacleType.Cube, Vector2.zero, 2f * Vector2.one, 45f));
+        //obstacleConfigs.Add(new ObstacleConfig(ObstacleType.Cube, new Vector2(0f, 4f), new Vector2(10f, 1f), 0f));
+        //obstacleConfigs.Add(new ObstacleConfig(ObstacleType.Cube, new Vector2(1.3f, -3.1f), new Vector2(1.6f, 0.3f), 0f));
+
+        Vector2[] pathNodePositions = {
+            new Vector2(-2.5f, 0f),
+            new Vector2(2.5f, 0f),
+            new Vector2(0f, -2.5f),
+            new Vector2(0f, 2.5f),
+        };
+
+        return new SceneConfig(new Vector2(1f, 1f), new Vector2(-4f, -4f), 1f, obstacleConfigs.ToArray(), pathNodePositions, 1f, 0, 670238407);
+
     }
 
     SceneConfig SC1()
@@ -113,6 +136,7 @@ public class CustomPresetConfig : PresetConfig
 
     }
 
+
     SceneConfig SC6()
     {
 
@@ -136,6 +160,9 @@ public class CustomPresetConfig : PresetConfig
         return new SceneConfig(new Vector2(1f, 1f), new Vector2(-4f, -4f), 1f, obstacleConfigs.ToArray(), pathNodePositions, 10f, 0, 670238407);
 
     }
+
+
+
 
 
 }

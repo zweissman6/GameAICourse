@@ -2,6 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClipperLib;
+
+using ClipperPath = System.Collections.Generic.List<ClipperLib.IntPoint>;
+using ClipperPaths = System.Collections.Generic.List<System.Collections.Generic.List<ClipperLib.IntPoint>>;
+
+
 
 public class Utils : MonoBehaviour
 {
@@ -9,6 +15,232 @@ public class Utils : MonoBehaviour
     public const string LineGroupName = "LineVizGroup";
     public const string LineGroupLayer = "LineViz";
     public const float ZOffset = 0.01f;
+
+
+    public static void AllVerticesFromPolygons(List<Polygon> polys, out List<Vector2> vertices)
+    {
+        vertices = new List<Vector2>();
+
+        foreach (var poly in polys)
+        {
+            var pts = poly.getPoints();
+            foreach (var pt in pts)
+            {
+                vertices.Add(pt);
+            }
+        }
+    }
+
+    public static bool IsLineInPolygons(Vector2 A, Vector2 B, List<Polygon> polys)
+    {
+        foreach (var poly in polys)
+        {
+            if (poly.IsLineInPolygon(A, B))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsLineCoincidentWithLineInPoly(Vector2 A, Vector2 B, Polygon poly)
+    {
+        float epsilon = 0.001f;
+
+        return IsLineCoincidentWithLineInPoly(A, B, poly, epsilon);
+    }
+
+
+    public static bool IsLineCoincidentWithLineInPoly(Vector2 A, Vector2 B, Polygon poly, float epsilon)
+    {
+        var pts = poly.getPoints();
+        for(int i = 0, j = pts.Length - 1; i<pts.Length; j=i++)
+        {
+            if(IsCollinear(A,B,pts[i]) && IsCollinear(A,B,pts[j]))
+            {
+
+                //Debug.LogError("COLLINEAR **************************");
+
+                var dir = (B - A).normalized;
+             
+                var minL = Vector2.Dot(dir, A);
+                var maxL = Vector2.Dot(dir, B);
+
+                if(maxL < minL)
+                {
+                    var tmp = minL;
+                    minL = maxL;
+                    maxL = tmp;
+                }
+
+                var minP = Vector2.Dot(dir, pts[i]);
+                var maxP = Vector2.Dot(dir, pts[j]);
+
+                if(maxP < minP)
+                {
+                    var tmp = minP;
+                    minP = maxP;
+                    maxP = tmp;
+                }
+                //Debug.Log($"{minL}, {maxL} > < {minP}, {maxP}");
+
+                // overlap test
+                if (!(minL - maxP >= -epsilon || -epsilon <= minP - maxL))
+                {
+                    //Debug.Log("OVERLAP***************************8");
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static bool IsLineCoincidentWithLineInPolys(Vector2 A, Vector2 B, List<Polygon> polys)
+    {
+        float epsilon = 0.001f;
+
+        return IsLineCoincidentWithLineInPolys(A, B, polys, epsilon);
+    }
+
+
+    public static bool IsLineCoincidentWithLineInPolys(Vector2 A, Vector2 B, List<Polygon> polys, float epsilon)
+    {
+
+        foreach(var poly in polys)
+        {
+            if (IsLineCoincidentWithLineInPoly(A, B, poly, epsilon))
+                return true;
+        }
+
+        return false;
+    }
+
+
+
+    public static void GenerateOffsetNavSpace(Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
+        float agentRadius,
+        List<Polygon> obstaclePolys, out List<Polygon> newPolys)
+    {
+        //const float scale = 1000.0f;
+
+        ClipperHelper.AssertClockwise(obstaclePolys);
+
+        ClipperPaths clipperPolysToJoin;
+
+        ClipperHelper.PolygonsToClipper(obstaclePolys, out clipperPolysToJoin);
+
+        ClipperPaths pUnion, pExpanded;
+
+        ClipperHelper.ClipperUnion(clipperPolysToJoin, out pUnion);
+
+        ClipperHelper.ClipperExpand(pUnion, agentRadius, out pExpanded);
+
+        ClipperPaths cBoundary;
+
+        ClipperHelper.BoundaryToClipper(canvasOrigin, canvasWidth, canvasHeight, out cBoundary);
+
+        ClipperPaths offsetBoundary;
+
+        ClipperHelper.ClipperExpand(cBoundary, -agentRadius, out offsetBoundary);
+
+        ClipperPaths pFinal;
+
+        //ClipperSubtract(offsetBoundary, pExpanded, out pFinal);
+        ClipperHelper.ClipperIntersect(pExpanded, offsetBoundary, out pFinal);
+
+        ClipperHelper.ClipperPathsToPolyList(pFinal, out newPolys);
+
+    }
+
+    public static Polygon LargestPolygon(List<Polygon> polys)
+    {
+        Polygon largest = null;
+        float largestSize = float.MinValue;
+
+        if (polys == null)
+            return null;
+
+        for (int i = 0; i < polys.Count; ++i)
+        {
+            var poly = polys[i];
+            Vector2 min, max;
+            poly.CalculateBounds(out min, out max);
+
+            var size = (max.x - min.x) * (max.y - min.y);
+
+            if (size > largestSize)
+            {
+                largestSize = size;
+                largest = poly;
+            }
+        }
+
+        return largest;
+    }
+
+
+    // this is an approximate test specific for use with complex polygons
+    public static bool IntersectsWithComplexPolys(Vector2 a, Vector2 b, List<Polygon> polys)
+    {
+        const int subdivisionSteps = 5;
+
+        if (polys == null)
+            return false;
+
+        bool aOnPoly = false;
+        bool bOnPoly = false;
+
+        foreach (var poly in polys)
+        {
+            // Phase I - basic screening
+
+            var pts = poly.getPoints();
+            if (pts == null)
+                continue;
+
+            for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
+            {
+                if (!aOnPoly)
+                    aOnPoly = a == pts[i];
+
+                if (!bOnPoly)
+                    bOnPoly = b == pts[i];
+
+                if (Intersects(a, b, pts[i], pts[j]))
+                    return true;
+            }
+
+            // Phase II - now deal with much tougher situation likely
+            // if a and b are both vertices of the poly in question
+            // (or line formed by a,b perfectly passes through 2 verts
+            // of poly)
+
+            Vector2 diff = b - a;
+            float magnitude = diff.magnitude;
+            Vector2 direction = diff.normalized;
+
+            float stepSize = magnitude / (float)(subdivisionSteps + 1);
+
+            for (int i = 1; i <= subdivisionSteps; ++i)
+            {
+                Vector2 testPos = a + direction * (i * stepSize);
+
+                if (poly.IsPointInPolygon(testPos))
+                {
+                    return true;
+                }
+            }
+
+            if (!aOnPoly && poly.IsPointInPolygon(a))
+                return true;
+
+            if (!bOnPoly && poly.IsPointInPolygon(b))
+                return true;
+        }
+
+        return false;
+    }
+
 
     public static bool Intersects(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
     {
@@ -35,7 +267,7 @@ public class Utils : MonoBehaviour
 
         bool doesIntersect = false;
 
-        for(int i = 0; i < poly.getPoints().Length; ++i)
+        for (int i = 0; i < poly.getPoints().Length; ++i)
         {
             var pt1 = poly.getPoints()[i];
             var pt2 = poly.getPoints()[(i + 1) % poly.getPoints().Length];
@@ -59,7 +291,7 @@ public class Utils : MonoBehaviour
     {
         var go = GameObject.Find(name);
 
-        if(go == null)
+        if (go == null)
         {
             go = new GameObject(name);
         }
@@ -69,7 +301,7 @@ public class Utils : MonoBehaviour
 
     public static GameObject FindOrCreateGameObjectByName(GameObject parent, string name)
     {
-     
+
         var xform = parent.transform.Find(name);
 
         GameObject go = null;
@@ -86,7 +318,7 @@ public class Utils : MonoBehaviour
 
         return go;
     }
-    public static GameObject DrawLine(Vector2 start, Vector2 end, float zpos, GameObject parent, Color color, Material mat = null, float lineWidth=0.05f)
+    public static GameObject DrawLine(Vector2 start, Vector2 end, float zpos, GameObject parent, Color color, Material mat = null, float lineWidth = 0.05f)
     {
         GameObject myLine = new GameObject();
         myLine.transform.parent = parent.transform;//FindOrCreateByName(Utils.LineGroupName).transform;
@@ -130,7 +362,7 @@ public class Utils : MonoBehaviour
             }
         }
     }
-    
+
     //Get the shortest distance from a point to a line
     //Line is defined by the lineStart and lineEnd points
     public static float DistanceToLine(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
@@ -167,7 +399,7 @@ public class Utils : MonoBehaviour
             if (DistanceToLine(point, polygon[i], polygon[j]) < epsilon)
                 return true;
         }
-        return false;      
+        return false;
     }
     /**
      * Returns true if the polygon is convex
@@ -176,13 +408,13 @@ public class Utils : MonoBehaviour
     {
         if (polygon.Length <= 2)
             return true;
-        float crossProduct = det(polygon[1]-polygon[0], polygon[2]-polygon[1]);
-        for ( int i = 1; i < polygon.Length; i++)
+        float crossProduct = det(polygon[1] - polygon[0], polygon[2] - polygon[1]);
+        for (int i = 1; i < polygon.Length; i++)
         {
             int j = (i + 1) % polygon.Length;
             int k = (j + 1) % polygon.Length;
             float newProduct = det(polygon[j] - polygon[i], polygon[k] - polygon[j]);
-            if (crossProduct / newProduct < 0)
+            if (crossProduct / newProduct < 0f)
                 return false;
         }
         return true;
@@ -200,7 +432,7 @@ public class Utils : MonoBehaviour
         }
         return false;
     }
-    
+
     /*
     * Returns false if there is an unobstructed  ray from point to dest point
     * Obstruction can be caused by the values in the lines
@@ -236,13 +468,13 @@ public class Utils : MonoBehaviour
                             return true;
                 */
                 }
-                if (Intersects(src_point, dest_point, points[j], points[(j+1)%points.Length]))
-                        return true;
+                if (Intersects(src_point, dest_point, points[j], points[(j + 1) % points.Length]))
+                    return true;
             }
             //mid point check for polygons
             //in case the points lie on the polygons, this test will help us figure that out
             //do this only in case the points are not found 
-            if ((i1 == -1) || (i2 == -1) || (i1 != -1 && i2 != -1) && (i1 + 1)% points.Length != i2 && (i2+1)%points.Length != i1)
+            if ((i1 == -1) || (i2 == -1) || (i1 != -1 && i2 != -1) && (i1 + 1) % points.Length != i2 && (i2 + 1) % points.Length != i1)
             {
                 Vector2 midPoint = new Vector2(0.00f, 0.00f);
 
@@ -269,7 +501,7 @@ public class Utils : MonoBehaviour
             if (IsRayObstructed(point, nodes[i], polygons))
                 continue;
             float dist = Vector2.Distance(point, nodes[i]);
-            if ( minDist > dist)
+            if (minDist > dist)
             {
                 minIndex = i;
                 minDist = dist;
@@ -293,26 +525,13 @@ public class Utils : MonoBehaviour
                 int j_n = (j + 1) % polygon2.Length;
                 if ((Vector2.Distance(polygon1[i], polygon2[j]) < epsilon && Vector2.Distance(polygon1[i_n], polygon2[j_n]) < epsilon)
                     || (Vector2.Distance(polygon1[i_n], polygon2[j]) < epsilon && Vector2.Distance(polygon1[i], polygon2[j_n]) < epsilon))
-                    return true;    
+                    return true;
             }
         }
         return false;
     }
 
-    //Creates a hash for the line segment created by points a and b
-    public static string HashLine(Vector2 a, Vector2 b)
-    {
-        string line;
-        if (a.magnitude < b.magnitude)
-        {
-            line = a.ToString() + b.ToString();
-        }
-        else
-        {
-            line = b.ToString() + a.ToString();
-        }
-        return line;
-    }
+
 
     /**Finds the centroid of the given polygon
      * */
@@ -342,5 +561,290 @@ public class Utils : MonoBehaviour
         float epsilon = 0.01f;
         Vector2 pt = p + new Vector2(Random.Range(0, epsilon), Random.Range(0, epsilon));
         return pt;
+    }
+
+
+
+    // convex intersection test code
+    //Polygon Apoly = new Polygon();
+    //Polygon Bpoly = new Polygon();
+
+    //Apoly.SetPoints(new Vector2[] {new Vector2(0f,0f), new Vector2(1f,0f), new Vector2(1f, 1f) });
+
+    //to the right well clear
+    //Bpoly.SetPoints(new Vector2[] { new Vector2(2f, 0f), new Vector2(3f, 0f), new Vector2(3f, 1f) });
+
+    //clearly overlapping area
+    //Bpoly.SetPoints(new Vector2[] { new Vector2(0.5f, 0f), new Vector2(1.5f, 0f), new Vector2(1.5f, 1f) });
+
+    //above but touching on edge
+    //Bpoly.SetPoints(new Vector2[] { new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 2f) });
+
+    //to the right but touching on edge
+    //Bpoly.SetPoints(new Vector2[] { new Vector2(1f, 0f), new Vector2(2f, 0f), new Vector2(2f, 1f) });
+
+    //Utils.ConvexIntersection(Apoly, Bpoly);
+
+    static bool ConvexIntersectionHelper(Polygon A, Polygon B, Vector2[] aPts, Vector2[] bPts, float epsilon)
+    {
+        for (int i = 0, j = aPts.Length - 1; i < aPts.Length; j = i++)
+        {
+            // Debug.Log($"Considering: {aPts[j].x}, {aPts[j].y} -> {aPts[i].x}, {aPts[i].y}");
+
+            var divLineCandidate = aPts[i] - aPts[j];
+            // perpendicular to divLine
+            var projLine = (new Vector2(-divLineCandidate.y, divLineCandidate.x)).normalized;
+
+            // Debug.Log($"DivLine: {divLineCandidate.x}, {divLineCandidate.y}");
+            // Debug.Log($"ProjLine: {projLine.x}, {projLine.y}");
+
+            float minA = float.MaxValue;
+            float maxA = float.MinValue;
+            //project pts of A
+            for (int k = 0; k < aPts.Length; ++k)
+            {
+                var val = Vector2.Dot(aPts[k], projLine);
+
+                if (val < minA)
+                    minA = val;
+
+                if (val > maxA)
+                    maxA = val;
+            }
+
+            // Debug.Log($"A min: {minA}, max: {maxA}");
+
+            float minB = float.MaxValue;
+            float maxB = float.MinValue;
+
+            for (int k = 0; k < bPts.Length; ++k)
+            {
+                var val = Vector2.Dot(bPts[k], projLine);
+
+                if (val < minB)
+                    minB = val;
+
+                if (val > maxB)
+                    maxB = val;
+            }
+
+            // Debug.Log($"B min: {minB}, max: {maxB}");
+
+            //float epsilon = 0.001f;
+            if (minA - maxB >= -epsilon || -epsilon <= minB - maxA)
+                return false;
+        }
+
+        return true;
+    }
+
+    public static bool ConvexIntersection(Polygon A, Polygon B)
+    {
+        float epsilon = 0.001f;
+        return ConvexIntersection(A, B, epsilon);
+    }
+
+    //http://web.archive.org/web/20141127210836/http://content.gpwiki.org/index.php/Polygon_Collision
+    public static bool ConvexIntersection(Polygon A, Polygon B, float epsilon)
+    {
+        if (A == null || B == null)
+            return false;
+
+        var aPts = A.getPoints();
+        var bPts = B.getPoints();
+
+        if (aPts == null || aPts.Length < 3 || bPts == null || bPts.Length < 3)
+            return false;
+
+        if (!ConvexIntersectionHelper(A, B, aPts, bPts, epsilon))
+        {
+            // Debug.Log("A had valid dividing line");
+            return false;
+        }
+
+        if (!ConvexIntersectionHelper(B, A, bPts, aPts, epsilon))
+        {
+            // Debug.Log("B had valid dividing line");
+            return false;
+        }
+
+        // Debug.Log("polygons must intersect because no dividing line found");
+        return true;
+    }
+
+    public static bool ConvexIntersection(Polygon A, List<Polygon> B)
+    {
+        float epsilon = 0.001f;
+        return ConvexIntersection(A, B, epsilon);
+    }
+
+    public static bool ConvexIntersection(Polygon A, List<Polygon> B, float epsilon)
+    {
+        if (A == null || B == null)
+            return false;
+
+        foreach (var p in B)
+        {
+            if (ConvexIntersection(A, p, epsilon))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsCollinear(Polygon p, float epsilon)
+    {
+        if (p == null)
+            return false;  
+
+        var pts = p.getPoints();
+
+        if (pts.Length < 3)
+            return false;
+
+        for(int i = 0; i < pts.Length-3; ++i)
+        {
+            if (!IsCollinear(pts[i], pts[i + 1], pts[i + 2], epsilon))
+                return false;
+        }
+
+        return true;
+    }
+
+    public static bool IsCollinear(Polygon p)
+    {
+        float epsilon = 0.001f;
+        return IsCollinear(p, epsilon);
+    }
+
+    public static bool IsCollinear(Vector2 v1, Vector2 v2, Vector2 v3, float epsilon)
+    {
+        var area2x = v1.x * (v2.y - v3.y) + v2.x * (v3.y - v1.y) + v3.x * (v1.y - v2.y);
+
+        return Mathf.Abs(area2x) < epsilon;
+    }
+
+    public static bool IsCollinear(Vector2 v1, Vector2 v2, Vector2 v3)
+    {
+        float epsilon = 0.001f;
+        return IsCollinear(v1, v2, v3, epsilon);
+    }
+
+
+
+    // merge polygons across common edge AB
+    public static Polygon MergePolygons(Polygon poly1, Polygon poly2, Vector2 A, Vector2 B)
+    {
+        Polygon mPoly = null;
+
+        if (poly1 == null || poly2 == null)
+            return mPoly;
+
+        if (poly1.GetLength() < 3 || poly2.GetLength() < 3)
+        {
+            Debug.LogError("Degenerate Polygon (too few verts)");
+            return mPoly;
+        }
+
+        if (poly1.IsClockwise() != poly2.IsClockwise())
+        {
+            Debug.LogError("Polygons have different windings");
+            return mPoly;
+        }
+
+        int poly1AIndex = IndexOfPointInPolygon(poly1, A);
+        int poly1BIndex = IndexOfPointInPolygon(poly1, B);
+        int poly2AIndex = IndexOfPointInPolygon(poly2, A);
+        int poly2BIndex = IndexOfPointInPolygon(poly2, B);
+
+        if (poly1AIndex < 0 || poly1BIndex < 0 || poly2AIndex < 0 || poly2AIndex < 0)
+        {
+            Debug.LogError("Common edge not found between two polygons (one or more verts not found)");
+            return mPoly;
+        }
+
+        if (
+            !(Mathf.Abs(poly1AIndex - poly1BIndex) == 1 ||
+            (poly1AIndex == 0 && poly1BIndex == poly1.GetLength() - 1) ||
+            (poly1BIndex == 0 && poly1AIndex == poly1.GetLength() - 1)) ||
+            !(Mathf.Abs(poly2AIndex - poly2BIndex) == 1 ||
+            (poly2AIndex == 0 && poly2BIndex == poly2.GetLength() - 1) ||
+            (poly2BIndex == 0 && poly2AIndex == poly2.GetLength() - 1))
+            )
+        {
+            Debug.LogError("Common edge not found between two polygons (verts not adjacent)");
+            return mPoly;
+        }
+
+        //walk from the current polygon to the first index and then switch to the second polygon and second index
+        //till the second polygon first index, switch to first polygon second index til the end
+
+        Vector2[] newPoints = new Vector2[poly1.GetLength() + poly2.GetLength() - 2];
+
+
+        int i = 0;
+
+        Vector2 lastPt = Vector2.negativeInfinity;
+
+        for (int j = 0, k = poly1BIndex;
+            j < poly1.GetLength();
+            ++j, k = ((k + 1) % poly1.GetLength()))
+        {
+            var newv = poly1.getPoints()[k];
+            if (newv != lastPt)
+            {
+                lastPt = newv;
+                newPoints[i] = newv;
+                ++i;
+            }
+        }
+
+        for (int j = 0, k = (poly2AIndex + 1) % poly2.GetLength();
+            j < poly2.GetLength() - 2;
+            ++j, k = ((k + 1) % poly2.GetLength()))
+        {
+            var newv = poly2.getPoints()[k];
+            if (newv != lastPt)
+            {
+                lastPt = newv;
+                newPoints[i] = newv;
+                ++i;
+            }
+        }
+
+        //DEBUG CODE
+        //for(int m = 0; m < newPoints.Length; ++m)
+        //{
+        //    for(int n = m+1; n < newPoints.Length; ++n)
+        //    {
+        //        if(newPoints[m] == newPoints[n])
+        //        {
+        //            Debug.LogError("Dupe points found");
+        //        }
+        //    }
+        //}
+
+        mPoly = new Polygon();
+        mPoly.SetPoints(newPoints);
+
+        return mPoly;
+    }
+
+    public static int IndexOfPointInPolygon(Polygon poly, Vector2 p)
+    {
+        int ret = -1;
+
+        if (poly == null)
+            return ret;
+
+        var pts = poly.getPoints();
+
+        for (int i = 0; i < pts.Length; ++i)
+        {
+            if (pts[i] == p)
+                return i;
+        }
+
+        return ret;
     }
 }

@@ -1,8 +1,9 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Polygon
+public class Polygon : IEquatable<Polygon>
 {
     Vector2[] points;       //list of all points in the polygon
     Vector2[,] lines;
@@ -55,6 +56,21 @@ public class Polygon
         return points;
     }
 
+
+    public void CalculateBounds(out Vector2 min, out Vector2 max)
+    {
+        min = float.MaxValue * Vector2.one;
+        max = float.MinValue * Vector2.one;
+
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (points[i].x < minBounds.x) minBounds.x = points[i].x;
+            if (points[i].x > maxBounds.x) maxBounds.x = points[i].x;
+            if (points[i].y < minBounds.y) minBounds.y = points[i].y;
+            if (points[i].y > maxBounds.y) maxBounds.y = points[i].y;
+        }
+    }
+
     void calculateBounds()
     {
         minBounds = points[0]; maxBounds = points[0];
@@ -104,7 +120,20 @@ public class Polygon
     //}
 
 
-    //This function does not consider points on the boundary as being on the inside
+    // Check if a point is one of the vertices
+    public bool IsPointAVertex(Vector2 p)
+    {
+        foreach (var pt in getPoints())
+        {
+            if (p == pt)
+                return true;
+        }
+
+        return false;
+    }
+
+    //is the point inside the polygon area
+    //This function is inconsistent regarding points on the boundary as being on the inside
     public bool IsPointInPolygon(Vector2 p)
     {
         // first pass axis aligned bounding box test
@@ -122,18 +151,41 @@ public class Polygon
         }
         return inside;
     }
-    
 
-    public bool IsLineInPolygon(Vector2 ptA, Vector2 ptB)
+    public bool IsLineInPolygonSameDirection(Vector2 ptA, Vector2 ptB)
     {
-        for (int i = 0; i < points.Length; i++)
+        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
         {
-            if (ptA == points[i] && ptB == points[(i + 1) % points.Length])
-                return true;
-            if (ptB == points[i] && ptA == points[(i + 1) % points.Length])
+            if (ptB == points[i] && ptA == points[j])
                 return true;
         }
         return false;
+    }
+
+    public bool IsLineInPolygonOppositeDirection(Vector2 ptA, Vector2 ptB)
+    {
+        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+        {
+            if (ptA == points[i] && ptB == points[j])
+                return true;
+        }
+        return false;
+    }
+
+    public bool IsLineInPolygon(Vector2 ptA, Vector2 ptB)
+    {
+        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+        {
+            if ((ptA == points[i] && ptB == points[j]) ||
+                    (ptB == points[i] && ptA == points[j]))
+                return true;
+        }
+        return false;
+    }
+
+    public bool IsConvex()
+    {
+        return Utils.IsConvex(this.getPoints());
     }
 
     public int GetLength()
@@ -158,7 +210,7 @@ public class Polygon
                 return false;
             //if 0 continue
         }
-        Debug.Log("Error, the polygon was just a straight line");
+        Debug.LogError("Error, the polygon was just a straight line");
         //would ideally raise an exception here
         return false;
     }
@@ -169,5 +221,24 @@ public class Polygon
     public void Reverse()
     {
         System.Array.Reverse(getPoints());
+    }
+
+    public override bool Equals(object obj)
+    {
+        return Equals(obj as Polygon);
+    }
+
+    public bool Equals(Polygon other)
+    {
+        return other != null &&
+               EqualityComparer<Vector2[]>.Default.Equals(points, other.points);
+    }
+
+    public override int GetHashCode()
+    {
+        var hashCode = 1410917715;
+        hashCode = hashCode * -1521134295 + EqualityComparer<Vector2[]>.Default.GetHashCode(points);
+
+        return hashCode;
     }
 }

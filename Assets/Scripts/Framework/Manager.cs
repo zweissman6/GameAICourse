@@ -18,6 +18,7 @@ public class Manager : MonoBehaviour
 
     public bool ShowStudentName = false;
 
+    public Material CustomPolygonMaterial;
 
     //public PathSearchProviderMonoBehavior SearchProvider;
     public IPathSearchProvider PathSearchProvider
