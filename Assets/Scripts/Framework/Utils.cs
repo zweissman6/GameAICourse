@@ -53,19 +53,19 @@ public class Utils : MonoBehaviour
     public static bool IsLineCoincidentWithLineInPoly(Vector2 A, Vector2 B, Polygon poly, float epsilon)
     {
         var pts = poly.getPoints();
-        for(int i = 0, j = pts.Length - 1; i<pts.Length; j=i++)
+        for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
         {
-            if(IsCollinear(A,B,pts[i]) && IsCollinear(A,B,pts[j]))
+            if (IsCollinear(A, B, pts[i], epsilon) && IsCollinear(A, B, pts[j], epsilon))
             {
 
                 //Debug.LogError("COLLINEAR **************************");
 
                 var dir = (B - A).normalized;
-             
+
                 var minL = Vector2.Dot(dir, A);
                 var maxL = Vector2.Dot(dir, B);
 
-                if(maxL < minL)
+                if (maxL < minL)
                 {
                     var tmp = minL;
                     minL = maxL;
@@ -75,7 +75,7 @@ public class Utils : MonoBehaviour
                 var minP = Vector2.Dot(dir, pts[i]);
                 var maxP = Vector2.Dot(dir, pts[j]);
 
-                if(maxP < minP)
+                if (maxP < minP)
                 {
                     var tmp = minP;
                     minP = maxP;
@@ -97,7 +97,7 @@ public class Utils : MonoBehaviour
 
     public static bool IsLineCoincidentWithLineInPolys(Vector2 A, Vector2 B, List<Polygon> polys)
     {
-        float epsilon = 0.001f;
+        float epsilon = 0.01f;
 
         return IsLineCoincidentWithLineInPolys(A, B, polys, epsilon);
     }
@@ -106,7 +106,7 @@ public class Utils : MonoBehaviour
     public static bool IsLineCoincidentWithLineInPolys(Vector2 A, Vector2 B, List<Polygon> polys, float epsilon)
     {
 
-        foreach(var poly in polys)
+        foreach (var poly in polys)
         {
             if (IsLineCoincidentWithLineInPoly(A, B, poly, epsilon))
                 return true;
@@ -401,24 +401,34 @@ public class Utils : MonoBehaviour
         }
         return false;
     }
-    /**
-     * Returns true if the polygon is convex
-     */
-    public static bool IsConvex(Vector2[] polygon)
+
+
+    // Return True if the polygon is convex.
+    public static bool IsConvex(Vector2[] poly)
     {
-        if (polygon.Length <= 2)
-            return true;
-        float crossProduct = det(polygon[1] - polygon[0], polygon[2] - polygon[1]);
-        for (int i = 1; i < polygon.Length; i++)
+        if (poly == null || poly.Length < 3) return false;
+
+        bool negDirSeen = false; bool posDirSeen = false;
+
+        for (int i = 0, j = poly.Length - 1, k = poly.Length - 2;
+            i < poly.Length; k = j, j = i++)
         {
-            int j = (i + 1) % polygon.Length;
-            int k = (j + 1) % polygon.Length;
-            float newProduct = det(polygon[j] - polygon[i], polygon[k] - polygon[j]);
-            if (crossProduct / newProduct < 0f)
-                return false;
+            var cp = CrossProductMagnitude(poly[i], poly[j], poly[k]);
+
+            if (cp < 0f) negDirSeen = true;
+            else if (cp > 0f) posDirSeen = true;
+
+            if (negDirSeen && posDirSeen) return false;
         }
         return true;
     }
+
+    public static float CrossProductMagnitude(Vector2 A, Vector2 B, Vector2 C)
+    {
+        return (A.x - B.x) * (C.y - B.y) - (A.y - B.y) * (C.x - B.x);
+    }
+
+
     /*
      * Returns false if there is an unobstructed  ray from point to dest point
      * Obstruction can be caused by the values in the lines
@@ -695,14 +705,14 @@ public class Utils : MonoBehaviour
     public static bool IsCollinear(Polygon p, float epsilon)
     {
         if (p == null)
-            return false;  
+            return false;
 
         var pts = p.getPoints();
 
         if (pts.Length < 3)
             return false;
 
-        for(int i = 0; i < pts.Length-3; ++i)
+        for (int i = 0; i < pts.Length - 3; ++i)
         {
             if (!IsCollinear(pts[i], pts[i + 1], pts[i + 2], epsilon))
                 return false;
