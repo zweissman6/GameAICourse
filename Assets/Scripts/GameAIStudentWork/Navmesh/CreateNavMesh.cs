@@ -37,9 +37,9 @@ namespace GameAICourse
         public static void Create(
             Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
             List<Polygon> obstacles, float agentRadius,
-            out List<Polygon> origTriangles, 
+            out List<Polygon> origTriangles,
             out List<Polygon> navmeshPolygons,
-            out List<Vector2> pathNodes, 
+            out List<Vector2> pathNodes,
             out List<List<int>> pathEdges)
         {
 
@@ -88,7 +88,7 @@ namespace GameAICourse
             // TODO set your name above
 
             //********************* PHASE I - Brute force triangle formation *****************
-  
+
             // In this phase, some scaffolding is provided for you. Your goal to to produce
             // triangles that will serve as the foundation of your navmesh. You will use
             // a brute force method of evaluating all combinations of three vertices to see
@@ -113,95 +113,76 @@ namespace GameAICourse
                         var V2 = obstacleVertices[j];
                         var V3 = obstacleVertices[k];
 
-                        // TODO If you completed all of the triangle generation above, 
-                        // you can just return from the Create() method here to test what you have
-                        // accomplished so far. The originalTriangles
-                        // will be visualized as translucent yellow polys. Since they are translucent,
-                        // any accidental tri overlaps will be a darker shade of yellow. (Useful
-                        // for debugging.)
-                        // Also, navmeshPolygons is initially just the tris. Those are visualized 
-                        // as a blue outline. Note that the blue lineweight is very thin for better 
-                        // debugging of small polys
+                        // TODO This inner loop involves tasks for you to implement
 
+                        // TODO first lets check if the candidate triangle
+                        // is NOT degenerate. Use Utils.IsCollinear(), if
+                        // it is then just call continue to go to the next tri
 
-                        // ********************* PHASE II - Merge Triangles *****************************
-                        // 
-                        // This phase involves merging triangles into larger convex polygons for the sake
-                        // of effeciency. If you like, you can temporarily skip to phase 3 and come back
-                        // later.
-                        // 
-                        // TODO Next up, you need to merge triangles into larger convex polygons where
-                        // possible. The greedy strategy you will use involves examining adjacent
-                        // tris and seeing if they can be merged into one new convex tri.
-                        // 
-                        // At the beginning of this process, you should make a copy of adjPolys. Continue
-                        // reading below to see why. You can copy like this: 
-                        // newAdjPolys = new AdjacentPolygons(adjPolys);
-                        // 
-                        // Iterate through adjPolys.Keys (type:CommonPolygonEdge) and get the value 
-                        // (type:CommonPolygons) for each key. This structure identifies only one polygon
-                        // if the edge is a boundary (.IsBarrier), but otherwise .AB and .BA references 
-                        // the adjacent polys. You can also get the .CommonEdge (with vertices .A and .B).
-                        // (The AB/BA refers to orientation of the common edge AB within each poly 
-                        // relative to the winding of the polygon.)
-                        // If you have two polygons AB and BA (NOT .IsBarrier), then use 
-                        // Utils.MergePolygons() to create a new polygon candidate. You need to 
-                        // check poly.IsConvex() to decide if it's valid. 
-                        // If it is valid, then you need to remove the common edge (and merged polys)
-                        // from your adjPolys dictionary and also add the new, larger convex poly. 
-                        // And further, you need all the other common edges of the two old merged polys 
-                        // to be updated with the merged version.
-                        // You actually want to perform the dictionary operations on "newAdjPolys" that
-                        // you created above. This is because you never want to add/remove items
-                        // to a data structure that you are iterating over. A slightly more efficient
-                        // alternative would be to make dedicated add and delete lists and apply them
-                        // after enumeration is complete.
-                        // The removal of a common edge can be accomplished with newAdjPolys.Remove().
-                        // You can add the new merged polygon and update all old poly references with
-                        // a single method call:
-                        // AddPolygon(Polygon p, Polygon replacePolyA, Polygon replacePolyB)
-                        // Similar to the updates to newAdjPolys, you also want to remove old polys
-                        // and add the new poly to navMeshPolygons.
-                        // When your loop is finished, don't forget to set adjPolys to newAdjPolys.
-
-                        // TODO At this point you can visualize a single pass of the merging (e.g. test your
-                        // code). After that, wrap it all in a loop that tries successive passes of
-                        // merges, tracking how many successful merges occur. Your loop should terminate
-                        // when no merges are successful.
-
-
-                        // *********************** PHASE 3 - Path Network from NavMesh *********************
-
-                        // The last step is to create a PathNetwork from your navMesh
-                        // This will involve iterating over the keys of adjPolys so you can get the 
-                        // CommonPolygons values.
+                        // TODO The next part is potentially a little tricky to understand,
+                        // but easy to implement. Many of the edges of the triangles
+                        // you form will be adjacent to obstacles. This creates a challenge
+                        // for testing whether a candidate triangle intersects with an obstacle
+                        // (because two polys sharing an edge may trigger an intersection test
+                        // between the two, especially with floating point inaccuracies).
+                        // But a more subtle problem is that greedy triangle formation
+                        // can make triangles that are "too big" and block adjacencies
+                        // from forming because navmesh poly adjacency can only occur via a 
+                        // common edge (not coincident edges with different vertices).
+                        // What you need to do is first determine which of the 3 tri edges
+                        // are edges of an obstacle polygon via Utils.IsLineInPolygons().
                         //
-                        // Issues you need to address are:
-                        // 1.) Calculate centroids of each polygon to be your pathNodes
-                        // 2.) Implement a method for mapping adjacent polygons to a pathNode index
-                        //     so that you can populate pathEdges.
+                        // ** Make sure you use offsetObstPolys any time you need to check
+                        // against obstacles ***
                         //
-                        // For 1.), poly.GetCentroid() will calculate the Vector2 position for you
-                        // 2.) is a bit more challenging. I recommend the use of a Dictionary
-                        // with a Polygon as key and the value is an int (for the pathNode index).
-                        // This dictionary can be populated with pathNode indices by iterating over
-                        // navmeshPolygons (List<Polygon>). This loop is also a good time to populate
-                        // pathNodes with the Vector2 centroids and prime the pathEdges with empty lists.
-                        // If you have resolved dev issues 1.) and 2.), you can then work with adjPolys
-                        // to create your edges!
+                        // Be sure to store these IsLineInPolygons() test results in vars 
+                        // since the test is expensive and you need the info later.
+                        // After that, each tri edge that is NOT a line/edge in a poly
+                        // should be checked further with Utils.IsLineCoincidentWithLineInPolys()
+                        // If any edge is coincident then skip this tri candidate (call continue).
+                        // This test will help stop triangles from forming that block
+                        // adjacencies from forming.
 
+                        // TODO you now want to see if your new tri edges intersect
+                        // with any of the obstacle edges. However, we don't want to 
+                        // test a tri edge that is exactly the same as an obstacle edge due
+                        // to previously mentioned issues with intersection tests.
+                        // So use your saved results from Utils.IsLineInPolygons() (above) to 
+                        // determine whether you should then call
+                        // Utils.IntersectsWithComplexPolys(). If this test intersects,
+                        // this skip the tri by calling continue.
+                        // This is an expensive test, and is approximate. This test also
+                        // doesn't work with complex polygons that have holes. None of the
+                        // preset maps have holes but if you form one by making a ring
+                        // of obstacles, you won't see a navmesh island inside the ring.
+                        // That is fine for this assignment.
 
-                        // ***************************** FINAL **********************************************
-                        // Once you have completed everything, you will probably find that the code
-                        // is very slow. This is largely due to the use of complex polygons. 
-                        // A production solution would instead work with only convex polygons (by
-                        // performing some sort of convex decomposition such as a triangulation).
-                        // 
-                        // If computation time is making testing difficult for you, first focus on the 
-                        // most simple maps. The default config should already be one of the easiest.
-                        // Additionally, you might consider temporarily changing:
-                        // ClipperHelper.ClipperExpand() to JoinType.jtMiter insead of JoinType.jtRound.
-                        // That change makes the scene have fewer vertices (no rounded offsets)
+                        // TODO If the tri candidate has gotten this far, now create
+                        // a new Polygon from your tri points. Also, we need to make sure
+                        // all tris are consistent ordering. So call tri.IsClockwise(). If it's 
+                        // NOT then call tri.Reverse() to fix it.
+
+                        // TODO Next, check if your new tri overlaps the other tris you
+                        // have added so far. You will be adding valid tris to origTriangles.
+                        // So, Use Utils.ConvexIntersection(Polygon, List<Polygon>)
+                        // If there is an overlap then call continue. Note that ConvexIntersection
+                        // uses a specific method and relaxed condition to avoid intersections
+                        // at common vertices and edges. However, it could fail at this 
+                        // for extremely large polygons.
+
+                        // TODO After that, you want to see if your new tri encloses any
+                        // obstacleVertices that aren't already points in the tri. Use
+                        // both IsPointAVertex() (to skip testing) and IsPointInPolygon() 
+                        // to accomplish this.
+                        // If you get a hit, call continue to pass on the tri.
+                        // NOTE that this is a fairly rare test to be successful.
+                        // You can temporarily skip it and come back later if you want.
+
+                        // TODO If the triangle has survived this far, add it to 
+                        // origTriangles.
+                        // Also, add it to the adjPolys dictionary with AddPolygon() (not
+                        // Add()). Internally, AddPolygon() is fairly complicated
+                        // as it tracks shared edges between polys
 
                     } // for
                 } // for
@@ -296,7 +277,6 @@ namespace GameAICourse
             // 
 
         } // Create()
-
 
 
         class AdjacentPolygons : Dictionary<CommonPolygonEdge, CommonPolygons>
