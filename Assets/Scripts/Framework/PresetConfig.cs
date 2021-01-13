@@ -18,6 +18,15 @@ public class PresetConfig : MonoBehaviour
 
     public MoveBall Agent;
 
+    public Camera sceneCamera;
+    public Camera gridOverlayCamera;
+    public Camera pathOverlayCamera;
+    public Camera searchOverlayCamera;
+
+    public GameObject gridOverlay;
+    public GameObject pathOverlay;
+    public GameObject searchOverlay;
+
 
     private GameObject PathNodeMarkersGroup;
     public GameObject WaypointPrefab;
@@ -52,20 +61,48 @@ public class PresetConfig : MonoBehaviour
         if (WaypointPrefab == null)
             Debug.LogError("no waypoint prefab");
 
+        if (sceneCamera == null)
+            Debug.LogError("no camera");
+
+        //if (gridOverlayCamera == null)
+        //    Debug.LogError("no grid overlay camera");
+
+        //if (gridOverlay == null)
+        //    Debug.LogError("grid overlay is null");
+
+        if (pathOverlayCamera == null)
+            Debug.LogError("no path overlay camera");
+
+        if (pathOverlay == null)
+            Debug.LogError("no path overlay");
+
+        if(searchOverlayCamera == null)
+        {
+            Debug.LogError("no search overlay camera");
+        }
+
+        if(searchOverlay == null)
+        {
+            Debug.LogError("no search overlay");
+        }
 
         LoadConfig(0);
 
     }
 
+    int currConfig = -1;
 
     bool LoadConfig(int pos)
     {
+        
 
         if (pos >= 0 && pos < SceneConfigs.Count)
         {
             var sc = SceneConfigs[pos];
 
-            Configure(sc.WorldSize, sc.AgentPos, sc.AgentScale, sc.ObstacleConfigs, sc.PathNodes, sc.GridCellSize, sc.NumExtraPathNodes, sc.Seed);
+            Configure(sc.WorldSize, sc.WorldOrigin, sc.AgentPos, sc.AgentScale, sc.ObstacleConfigs, sc.PathNodes, sc.GridCellSize, sc.NumExtraPathNodes, sc.Seed);
+
+            currConfig = pos;
 
             return true;
         }
@@ -79,33 +116,68 @@ public class PresetConfig : MonoBehaviour
     {
         int pos = -1;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyUp(KeyCode.Alpha1))
             pos = 0;
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        if (Input.GetKeyUp(KeyCode.Alpha2))
             pos = 1;
-        if (Input.GetKeyDown(KeyCode.Alpha3))
+        if (Input.GetKeyUp(KeyCode.Alpha3))
             pos = 2;
-        if (Input.GetKeyDown(KeyCode.Alpha4))
+        if (Input.GetKeyUp(KeyCode.Alpha4))
             pos = 3;
-        if (Input.GetKeyDown(KeyCode.Alpha5))
+        if (Input.GetKeyUp(KeyCode.Alpha5))
             pos = 4;
-        if (Input.GetKeyDown(KeyCode.Alpha6))
+        if (Input.GetKeyUp(KeyCode.Alpha6))
             pos = 5;
-        if (Input.GetKeyDown(KeyCode.Alpha7))
+        if (Input.GetKeyUp(KeyCode.Alpha7))
             pos = 6;
-        if (Input.GetKeyDown(KeyCode.Alpha8))
+        if (Input.GetKeyUp(KeyCode.Alpha8))
             pos = 7;
-        if (Input.GetKeyDown(KeyCode.Alpha9))
+        if (Input.GetKeyUp(KeyCode.Alpha9))
             pos = 8;
-        if (Input.GetKeyDown(KeyCode.Alpha0))
+        if (Input.GetKeyUp(KeyCode.Alpha0))
             pos = 9;
 
 
-        if (pos > -1 && !LoadConfig(pos))
+        if (pos > -1)
         {
 
-            Debug.Log("Config " + pos + " doesn't exist!");
+            if (!LoadConfig(pos))
+                Debug.Log("Config " + pos + " doesn't exist!");
+            else
+                return;
         }
+
+
+        var grid = DiscretizedSpace as GameGrid;
+
+
+        if (grid != null)
+        {
+
+            if (Input.GetKeyUp(KeyCode.V))
+            {
+                grid.VisualizePathNetwork = !grid.VisualizePathNetwork;
+                Debug.Log($"VisualizePathNetwork is now set to: {grid.VisualizePathNetwork}");
+                LoadConfig(currConfig);
+            }
+
+            if (Input.GetKeyUp(KeyCode.Period))
+            {
+                grid.gridConnectivity = grid.gridConnectivity == GridConnectivity.EightWay ?
+                    grid.gridConnectivity = GridConnectivity.FourWay : grid.gridConnectivity = GridConnectivity.EightWay;
+                Debug.Log($"GridConnectivity is now set to: {grid.gridConnectivity}");
+                LoadConfig(currConfig);
+            }
+
+
+        }
+
+
+       if(Input.GetKeyUp(KeyCode.T))
+        {
+            obstacles.ToggleModelsVisible();
+        }
+
     }
 
 
@@ -114,12 +186,60 @@ public class PresetConfig : MonoBehaviour
 
         DiscretizedSpace.transform.localScale = new Vector3(scalex, 1f, scalez);
 
-        var s = DiscretizedSpace.GetComponent<UVAdjustment>();
+        //var s = DiscretizedSpace.GetComponent<UVAdjustment>();
+        var s = DiscretizedSpace.GetComponentInChildren<UVAdjustment>();
 
         if (s != null)
         {
             s.AdjustTextureCoords();
         }
+    }
+
+
+    void SetDiscretizedSpacePosition(float xpos, float zpos)
+    {
+
+        DiscretizedSpace.transform.position = new Vector3(xpos, 0f, zpos);
+
+    }
+
+
+
+    void SetCamera(Camera cam, float y_offset) 
+    {
+        var pos = DiscretizedSpace.transform.position;
+        pos.y += y_offset; //10f
+        cam.transform.position = pos;
+
+        cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        var camAspect = cam.aspect; //w/h
+        var sceneScale = DiscretizedSpace.transform.localScale;
+        var sceneScale_w = sceneScale.x/2f;
+        var sceneScale_h = sceneScale.z/2f;
+        var sceneAspect = sceneScale_w / sceneScale_h;
+
+
+        //Debug.Log($"Scene Scale: w:{sceneScale_w}, h:{sceneScale_h}");
+        //Debug.Log($"Scene Aspect: {sceneAspect}");
+        //Debug.Log($"Cam Aspect: {camAspect}");
+        
+
+        var camHalfWidth = sceneScale_h * camAspect;
+
+        var buffer = 1f;
+
+        if (camHalfWidth < sceneScale_w)
+        {
+            //Debug.Log("Too wide!");
+            cam.orthographicSize = sceneScale_w / camAspect + buffer;
+        }
+        else
+        {
+            //Debug.Log("Too tall");
+            cam.orthographicSize = sceneScale_h + buffer;
+        }
+
     }
 
 
@@ -206,7 +326,7 @@ public class PresetConfig : MonoBehaviour
     }
 
 
-    protected void PlacePathNodes(int totalNodes, int seed)
+    protected void PlacePathNodes(int totalNodes, float agentScale, int seed)
     {
 
         //var seed = Random.Range(0, int.MaxValue);
@@ -231,6 +351,7 @@ public class PresetConfig : MonoBehaviour
         // Try to place some corner points
 
         var pt = Instantiate(WaypointPrefab, PathNodeMarkersGroup.transform);
+        pt.transform.localScale = Vector3.one * agentScale;
 
         var radMult = 2f;
 
@@ -245,6 +366,7 @@ public class PresetConfig : MonoBehaviour
             Destroy(pt);
 
         pt = Instantiate(WaypointPrefab, PathNodeMarkersGroup.transform);
+        pt.transform.localScale = Vector3.one * agentScale;
 
         posv = origin + new Vector2(width, height) - cornerOffset;
         if (NewPathNodeIsValid(posv))
@@ -253,6 +375,7 @@ public class PresetConfig : MonoBehaviour
             Destroy(pt);
 
         pt = Instantiate(WaypointPrefab, PathNodeMarkersGroup.transform);
+        pt.transform.localScale = Vector3.one * agentScale;
 
         cornerOffset *= new Vector2(1f, -1f);
         posv = origin + new Vector2(width, 0f) - cornerOffset;
@@ -262,6 +385,7 @@ public class PresetConfig : MonoBehaviour
             Destroy(pt);
 
         pt = Instantiate(WaypointPrefab, PathNodeMarkersGroup.transform);
+        pt.transform.localScale = Vector3.one * agentScale;
 
         posv = origin + new Vector2(0f, height) + cornerOffset;
         if (NewPathNodeIsValid(posv))
@@ -274,6 +398,7 @@ public class PresetConfig : MonoBehaviour
         {
 
             pt = Instantiate(WaypointPrefab, PathNodeMarkersGroup.transform);
+            pt.transform.localScale = Vector3.one * agentScale;
 
             int count = 0;
             const int MaxCount = 100;
@@ -338,6 +463,7 @@ public class PresetConfig : MonoBehaviour
     public struct SceneConfig
     {
         public Vector2 WorldSize;
+        public Vector2 WorldOrigin;
         public Vector2 AgentPos;
         public float AgentScale;
         public ObstacleConfig[] ObstacleConfigs;
@@ -346,9 +472,10 @@ public class PresetConfig : MonoBehaviour
         public int NumExtraPathNodes;
         public int Seed;
 
-        public SceneConfig(Vector2 worldSize, Vector2 agentPos, float agentScale, ObstacleConfig[] obstacleConfigs, Vector2[] pathNodes, float gridCellSize, int numExtraPathNodes, int seed)
+        public SceneConfig(Vector2 worldSize, Vector2 worldOrigin, Vector2 agentPos, float agentScale, ObstacleConfig[] obstacleConfigs, Vector2[] pathNodes, float gridCellSize, int numExtraPathNodes, int seed)
         {
             WorldSize = worldSize;
+            WorldOrigin = worldOrigin;
             AgentPos = agentPos;
             AgentScale = agentScale;
             ObstacleConfigs = obstacleConfigs;
@@ -375,7 +502,7 @@ public class PresetConfig : MonoBehaviour
         }
     }
 
-    public void Configure(Vector2 worldSize, Vector2 agentPos, float agentScale, ObstacleConfig[] obstacleConfig, Vector2[] pathNodes, float gridCellSize, int numPathNodes, int seed)
+    public void Configure(Vector2 worldSize, Vector2 worldOrigin, Vector2 agentPos, float agentScale, ObstacleConfig[] obstacleConfig, Vector2[] pathNodes, float gridCellSize, int numPathNodes, int seed)
     {
         //delete old obstacles
         obstacles.DeleteObstacles();
@@ -398,6 +525,37 @@ public class PresetConfig : MonoBehaviour
 
         // set ground plane size
         SetDiscretizedSpaceSize(worldSize.x, worldSize.y);
+
+        SetDiscretizedSpacePosition(worldOrigin.x, worldOrigin.y);
+
+        SetCamera(sceneCamera, 10f);
+
+        if (gridOverlayCamera != null)
+        {
+            SetCamera(gridOverlayCamera, 100f);
+
+            if(gridOverlay != null)
+                ConfigureOverlay(gridOverlayCamera, gridOverlay, 0.01f);
+        }
+
+        if (pathOverlayCamera != null)
+        {
+            SetCamera(pathOverlayCamera, 200f);
+
+            if(pathOverlay != null)
+                ConfigureOverlay(pathOverlayCamera, pathOverlay, 0.02f);
+
+        }
+
+
+        if(searchOverlayCamera != null)
+        {
+            SetCamera(searchOverlayCamera, 300f);
+
+            if (searchOverlay != null)
+                ConfigureOverlay(searchOverlayCamera, searchOverlay, 0.03f);
+        }
+
 
         // set grid rez
         var g = DiscretizedSpace as GameGrid;
@@ -424,10 +582,11 @@ public class PresetConfig : MonoBehaviour
             foreach( var pnode in pathNodes)
             {
                 var onode = Instantiate(WaypointPrefab, new Vector3(pnode.x, 0f, pnode.y), Quaternion.identity, PathNodeMarkersGroup.transform);
+                onode.transform.localScale = Vector3.one * agentScale;
             }
 
             if(numPathNodes > 0)
-                PlacePathNodes(numPathNodes, seed);
+                PlacePathNodes(numPathNodes, agentScale, seed);
         }
 
         DiscretizedSpace.Bake();
@@ -436,6 +595,34 @@ public class PresetConfig : MonoBehaviour
 
 
  
+    void ConfigureOverlay(Camera srcCam, GameObject overlay, float offset)
+    {
+        var sz = srcCam.orthographicSize;
+        var aspt = srcCam.aspect;
+        var pos = transform.position;
+        overlay.transform.localScale = new Vector3(sz * aspt * 2f, sz * 2f, 1f);
+        overlay.transform.position = pos + Vector3.up * offset;
+        var rndr = overlay.GetComponent<Renderer>();
+
+        if (rndr == null)
+        {
+            Debug.LogError("no renderer on gridOverlay!");
+        }
+        else
+        {
+            var oc = srcCam.GetComponent<OverlayCamera>();
+            if (oc == null)
+            {
+                Debug.LogError("no overlay camera script");
+            }
+            else
+            {
+                //Debug.Log($"overlay_mat: {rndr.sharedMaterial.mainTexture.graphicsFormat}");
+
+                rndr.sharedMaterial = oc.Material;
+            }
+        }
+    }
 
 
     

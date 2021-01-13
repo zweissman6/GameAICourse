@@ -10,7 +10,8 @@ public class BasicPathSearchImpl
     }
     public static PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges,
        int startNodeIndex, int goalNodeIndex,
-       bool IsBFS, //true for BFS, false for DFS
+       bool IsBFS, //true for BFS, false for DFS,
+       bool randomExpansion, // true if expanded edges added in random order
        int maxNumNodesToExplore, bool doInitialization,
        ref int currentNodeIndex,
        ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords,
@@ -33,7 +34,7 @@ public class BasicPathSearchImpl
             return PathSearchResultType.InitializationError;
         }
 
-        float max_dfs_priority = Mathf.Pow(2f, 20f);
+        //float max_dfs_priority = Mathf.Pow(2f, 20f);
 
         if (doInitialization)
         {
@@ -43,7 +44,8 @@ public class BasicPathSearchImpl
             closedNodes = new HashSet<int>();
             var firstNodeRecord = new PathSearchNodeRecord(currentNodeIndex);
             searchNodeRecords.Add(firstNodeRecord.NodeIndex, firstNodeRecord);
-            float startingPriority = IsBFS ? 0f : max_dfs_priority; 
+            //float startingPriority = IsBFS ? 0f : max_dfs_priority;
+            float startingPriority = 0f;
             openNodes.Enqueue(firstNodeRecord.NodeIndex, startingPriority);
             returnPath = new List<int>();
         }
@@ -53,6 +55,9 @@ public class BasicPathSearchImpl
         if (openNodes.Count > 0)
             currentPriority = openNodes.GetPriority(openNodes.First);
 
+        // DFS priorities go negative so our priority queue always gives the most recently explored nodes
+        // we take ABS here to minimize changes to logic elsewhere in the code
+        currentPriority = Mathf.Abs(currentPriority);
 
         int nodesProcessed = 0;
         while (nodesProcessed < maxNumNodesToExplore && openNodes.Count > 0)
@@ -61,37 +66,99 @@ public class BasicPathSearchImpl
             var currentNodeRecord = searchNodeRecords[openNodes.First]; 
             currentNodeIndex = currentNodeRecord.NodeIndex;
 
-            currentPriority = IsBFS ? currentPriority + 1f : currentPriority - 1f;
-
+   
             ++nodesProcessed;
-         
+
+            // goal check should be in edge expansion for better time performance!
+            // However, doing so means goal found sooner. But if we are using DFS
+            // we are probably intentionally looking for long paths...
             if (currentNodeIndex == goalNodeIndex)
                 break;
 
-            PathSearchNodeRecord edgeNodeRecord;
+
+            bool updateOpen = false;
+
+            // In range [0.0, 1.0]
+            // if DFS with randomExpansion, smaller value results in tighter
+            // path. Larger value more meandering path.
+            float updateOpenThreshold = 0.5f;
+
+
+            PathSearchNodeRecord edgeNodeRecord = null;
+
+            var currEdges = edges[currentNodeIndex];
+
+            // Just for fun. If random expansion is enabled, DFS can generate funny paths
+            if (randomExpansion)
+            {
+                List<int> shuffleEdges = new List<int>(currEdges);
+
+                currEdges = new List<int>(shuffleEdges.Count);
+
+                while(shuffleEdges.Count > 0)
+                {
+                    int i = Random.Range(0, shuffleEdges.Count);
+                    currEdges.Add(shuffleEdges[i]);
+                    shuffleEdges.RemoveAt(i);
+                }
+            }
+            
    
-            foreach (var edgeNodeIndex in edges[currentNodeIndex])
+            foreach (var edgeNodeIndex in currEdges)
             {
                 var costToEdgeNode = currentNodeRecord.CostSoFar +
                     G(nodes[currentNodeIndex], nodes[edgeNodeIndex]);
 
 
-                if (closedNodes.Contains(edgeNodeIndex) || openNodes.Contains(edgeNodeIndex))
+                if (closedNodes.Contains(edgeNodeIndex))
                 {
                     continue;
+                }
+                else if(openNodes.Contains(edgeNodeIndex))
+                {
+
+                    if (!IsBFS)
+                    {
+                        if (randomExpansion)
+                            updateOpen = Random.value > updateOpenThreshold;
+                        else
+                            updateOpen = true;
+                    }
+
+
+                    if (updateOpen)
+                        edgeNodeRecord = searchNodeRecords[edgeNodeIndex];
+                    else
+                        continue;
                 }
                 else
                 {
                     edgeNodeRecord = new PathSearchNodeRecord(edgeNodeIndex);      
                 }
 
+                currentPriority += 1;
+
                 edgeNodeRecord.FromNodeIndex = currentNodeIndex;
          
                 searchNodeRecords[edgeNodeIndex] = edgeNodeRecord;
 
-                if (!openNodes.Contains(edgeNodeIndex))     
-                    openNodes.Enqueue(edgeNodeIndex, currentPriority); 
-                
+                // This simple trick allows this code to support both BFS and DFS.
+                var newPriority = IsBFS ? currentPriority : -currentPriority;
+
+                if (!openNodes.Contains(edgeNodeIndex))
+                {
+                    openNodes.Enqueue(edgeNodeIndex, newPriority);
+                }
+                else
+                {
+                    if (IsBFS)
+                        Debug.LogError("Shouldn't rewrite open set in BFS!");
+
+                    if(updateOpen)
+                        openNodes.UpdatePriority(edgeNodeIndex, newPriority);
+
+                }
+
             } //foreach() edge processing of current node
 
             openNodes.Remove(currentNodeIndex);
@@ -106,6 +173,12 @@ public class BasicPathSearchImpl
             foreach (var n in closedNodes)
             {
                 var nrec = searchNodeRecords[n];
+
+                // Hmmm. I bet if we were using this partial path code with an A* implementation 
+                // we could avoid calculating Euclidean distance again using cached metadata.
+                // (But we would need to deduce whether said code was running in Dijkstra
+                // mode with a zero constant Heuristic() func)
+                // Otherwise, we must calculate the distance
                 var d = Vector2.Distance(nodes[nrec.NodeIndex], nodes[goalNodeIndex]);
                 if (d < closestDist)
                 {

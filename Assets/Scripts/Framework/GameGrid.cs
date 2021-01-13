@@ -1,5 +1,8 @@
-﻿using System.Collections;
+﻿//#define SAVE_CASES
+
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,13 +12,22 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 {
 
     public float CellSize = 0.2f;
+
+    public GridConnectivity gridConnectivity = GridConnectivity.FourWay;
+
+    public GridConnectivity GridConn
+    {
+        get
+        {
+            return gridConnectivity;
+        }
+    }
+
     public bool[,] Grid { get; protected set; }
 
     public Color LineColor = Color.green;
     public Color BlockedLineColor = Color.blue;
-    public Color PathNetworkLineColor = Color.white;
 
-    public Material LineMaterial;        //Material used to draw the lines for the grid
 
     public bool VisualizePathNetwork = false;
 
@@ -27,8 +39,10 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
     }
 
     // Start is called before the first frame update
-    void Start()
+    public override void Start()
     {
+        base.Start();
+
         Obstacles.Init();
 
         Bake();
@@ -37,6 +51,11 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     }
 
+#if SAVE_CASES
+    int caseCount = 0;
+#endif
+
+    public bool UseHardCodedCases = false;
 
     override public void Bake()
     {
@@ -45,8 +64,59 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
         List<Vector2> pathNodes;
         List<List<int>> pathEdges;
 
-        CreateGrid.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize,
-                            Obstacles.getObstacles(), out grid, out pathNodes, out pathEdges);
+        var obst = Obstacles.getObstacles();
+
+        var polys = new List<Polygon>(obst.Count);
+
+        for(int i=0; i < obst.Count; ++i)
+        {
+            polys.Add(obst[i].GetPolygon());
+        }
+
+        GridCase overrideCase = null;
+
+        if (UseHardCodedCases)
+        {
+            var gct = new GridCase(0, BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, polys, gridConnectivity);
+
+            overrideCase = HardCodedGridCases.FindCase(gct);
+        }
+
+        if (overrideCase != null)
+        {
+            grid = overrideCase.grid;
+            pathNodes = overrideCase.pathNodes;
+            pathEdges = overrideCase.pathEdges;
+        }
+        else
+        {
+
+            //pathNodes = new List<Vector2>();
+            //pathEdges = new List<List<int>>();
+            //grid = new bool[1, 1];
+            //grid[0, 0] = true;
+
+            CreateGrid.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize,
+                                polys, out grid);
+
+            CreateGrid.CreatePathNetworkFromGrid(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.y, CellSize, gridConnectivity,
+                            grid, out pathNodes, out pathEdges);
+        }
+
+
+
+#if SAVE_CASES
+
+        GridCase gc = new GridCase(caseCount++, BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, polys, GridConn, grid, pathNodes, pathEdges);
+
+        using (var OutFile = new StreamWriter("cases.txt", true))
+        {
+
+            OutFile.WriteLine(gc);
+        }
+
+#endif
+
 
         Grid = grid;
         PathNodes = pathNodes;
@@ -62,11 +132,31 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
         if (VisualizePathNetwork)
         {
             if (PathNodes != null && PathEdges != null)
-                CreateNetworkLines();
+                CreateNetworkLines(PathOverlay_OffsetFromFarCP);
         }
+
+        GridOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
+        GridOverlayCamera.Render();
+        GridOverlayCamera.clearFlags = CameraClearFlags.Nothing;
+
+        PathOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
+        PathOverlayCamera.Render();
+        PathOverlayCamera.clearFlags = CameraClearFlags.Nothing;
+
+        DisableLineViz();
 
     }
 
+    void DisableLineViz()
+    {
+
+        var linegroup = this.transform.Find(Utils.LineGroupName);
+
+        if (linegroup != null)
+        {
+            linegroup.gameObject.SetActive(false);
+        }
+    }
 
 
     void PurgeOutdatedLineViz()
@@ -94,6 +184,9 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
     {
         //PurgeOutdatedLineViz();
 
+        var offset = GridOverlay_OffsetFromFarCP;
+        var offset2 = GridOverlay_OffsetFromFarCP - 0.01f;
+
         var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
 
         float width = grid.GetLength(0) * cellSize;
@@ -101,12 +194,12 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         for (int i = 0; i <= grid.GetLength(0); i++)
         {
-            Utils.DrawLine(canvas_pos + new Vector2(i * cellSize, 0f), canvas_pos + new Vector2(i * cellSize, height), Utils.ZOffset, parent, LineColor, LineMaterial);
+            Utils.DrawLine(canvas_pos + new Vector2(i * cellSize, 0f), canvas_pos + new Vector2(i * cellSize, height), offset, parent, LineColor, LineMaterial);
         }
 
         for (int j = 0; j <= grid.GetLength(1); j++)
         {
-            Utils.DrawLine(canvas_pos + new Vector2(0f, j * cellSize), canvas_pos + new Vector2(width, j * cellSize), Utils.ZOffset, parent, LineColor, LineMaterial);
+            Utils.DrawLine(canvas_pos + new Vector2(0f, j * cellSize), canvas_pos + new Vector2(width, j * cellSize), offset, parent, LineColor, LineMaterial);
         }
 
         for (int i = 0; i < grid.GetLength(0); i++)
@@ -121,8 +214,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
                 if (!grid[i, j])
                 {
-                    Utils.DrawLine(canvas_pos + new Vector2(lX, tY), canvas_pos + new Vector2(rX, bY), Utils.ZOffset, parent, BlockedLineColor, LineMaterial);
-                    Utils.DrawLine(canvas_pos + new Vector2(rX, tY), canvas_pos + new Vector2(lX, bY), Utils.ZOffset, parent, BlockedLineColor, LineMaterial);
+                    Utils.DrawLine(canvas_pos + new Vector2(lX, tY), canvas_pos + new Vector2(rX, bY), offset2, parent, BlockedLineColor, LineMaterial);
+                    Utils.DrawLine(canvas_pos + new Vector2(rX, tY), canvas_pos + new Vector2(lX, bY), offset2, parent, BlockedLineColor, LineMaterial);
                 }
 
             }
@@ -132,47 +225,6 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
     }
 
 
-    void CreateNetworkLines()
-    {
-        //PurgeOutdatedLineViz();
-
-        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
-
-
-        HashSet<System.Tuple<int, int>> hs = new HashSet<System.Tuple<int, int>>();
-
-
-        if (PathEdges != null)
-        {
-            for (int i = 0; i < PathEdges.Count; ++i)
-            {
-                var pts = PathEdges[i];
-                if (pts != null)
-                {
-                    for (int j = 0; j < pts.Count; ++j)
-                    {
-                        var smaller = i;
-                        var bigger = pts[j];
-
-                        if (bigger < smaller)
-                        {
-                            var tmp = bigger;
-                            bigger = smaller;
-                            smaller = tmp;
-                        }
-
-                        var tup = new System.Tuple<int, int>(smaller, bigger);
-                        if (!hs.Contains(tup))
-                        {
-                            hs.Add(tup);
-                            Utils.DrawLine(PathNodes[i], PathNodes[pts[j]], Utils.ZOffset, parent, PathNetworkLineColor, LineMaterial);
-                        }
-
-                    }
-                }
-            }
-        }
-    }
 
 
     //

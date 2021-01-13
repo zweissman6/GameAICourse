@@ -7,7 +7,7 @@ public interface IPathSearchProvider
 
 
 
-    PathSearchResultType FindPath(List<Vector2> nodes, List<List<int>> edges,
+    PathSearchResultType FindPath(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
                                     int startNodeIndex,
                                     int goalNodeIndex,                              
                                     ref int currentNode,
@@ -18,7 +18,7 @@ public interface IPathSearchProvider
                                     );
 
 
-    PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges,
+    PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
                                         int startNodeIndex, int goalNodeIndex, 
                                         int maxNumNodesToExplore, bool doInitialization,
                                         ref int currentNode,

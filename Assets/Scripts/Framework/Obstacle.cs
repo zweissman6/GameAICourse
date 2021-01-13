@@ -47,6 +47,13 @@ public class Obstacle : MonoBehaviour, IDragFinishedObserver
             }
 
             polygon.SetPoints(xformPts);
+
+            if(!CG.Ccw(polygon.getIntegerPoints()))
+            {
+
+                Debug.LogError("Polygon found with NOT CCW. FIxing!");
+                polygon.Reverse();
+            }
         }
         DrawPolygon();
     }
@@ -81,7 +88,7 @@ public class Obstacle : MonoBehaviour, IDragFinishedObserver
 
         for (int i = 0; i < GetPoints().Length; i++)
         {
-            Utils.DrawLine(GetPoints()[i], GetPoints()[(i+1)% GetPoints().Length], Utils.ZOffset, parent, LineColor, LineMaterial);
+            Utils.DrawLine(GetPoints()[i], GetPoints()[(i+1)% GetPoints().Length], Utils.ZOffset+0.03f, parent, LineColor, LineMaterial);
         }
     }
 
@@ -112,11 +119,17 @@ public class Obstacle : MonoBehaviour, IDragFinishedObserver
         return polygon.GetCentroid();
     }
 
-    public Vector2[,] GetLines()
+    //public Vector2[,] GetLines()
+    //{
+    //    return polygon.GetLines();
+    //}
+
+    public Vector2Int[] GetIntegerPoints()
     {
-        return polygon.GetLines();
+        return polygon.getIntegerPoints();
     }
-    
+
+
     public Vector2[] GetPoints()
     {
         return polygon.getPoints();
@@ -125,12 +138,13 @@ public class Obstacle : MonoBehaviour, IDragFinishedObserver
 
     public bool IsPointInPolygon(Vector2 p)
     {
-        return polygon.IsPointInPolygon(p);
+        //return polygon.IsPointInsidePolygon(p);
+        return CG.InPoly1(GetPoints(), p) != CG.PointPolygonIntersectionType.Outside;
     }
-    
+
     public bool IsLineInPolygon(Vector2 ptA, Vector2 ptB)
     {
-        return polygon.IsLineInPolygon(ptA, ptB);
+        return polygon.IsLineSegmentOfPolygon(ptA, ptB);
 
     }
 
@@ -138,14 +152,14 @@ public class Obstacle : MonoBehaviour, IDragFinishedObserver
     {
         return GetPoints().Length;
     }
-    /**
-     * Returns if the polygon is clockwise
-     * Will only work for convex polygons
-     */ 
-    public bool IsClockwise()
-    {
-        return polygon.IsClockwise();
-    }
+    ////
+    // // Returns if the polygon is clockwise
+    // // Will only work for convex polygons
+    // // 
+    //public bool IsClockwise()
+    //{
+    //    return polygon.IsClockwise();
+    //}
 
     /*
      * Reverses the direction of this polygon

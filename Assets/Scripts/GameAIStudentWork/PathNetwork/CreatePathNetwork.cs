@@ -11,33 +11,53 @@ namespace GameAICourse
 
         public const string StudentAuthorName = "George P. Burdell ← Not your name, change it!";
 
+
+
+
+        // Helper method provided to help you implement this file. Leave as is.
+        // Returns Vector2 converted to Vector2Int according to default scaling factor (1000)
+        public static Vector2Int Convert(Vector2 v)
+        {
+            return CG.Convert(v);
+        }
+
+        // Helper method provided to help you implement this file. Leave as is.
+        // Returns true is segment AB intersects CD properly or improperly
+        static public bool Intersects(Vector2Int a, Vector2Int b, Vector2Int c, Vector2Int d)
+        {
+            return CG.Intersect(a, b, c, d);
+        }
+
+
+        // Helper method provided to help you implement this file. Leave as is.
+        //Get the shortest distance from a point to a line
+        //Line is defined by the lineStart and lineEnd points
+        public static float DistanceToLineSegment(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
+        {
+            return CG.DistanceToLineSegment(point, lineStart, lineEnd);
+        }
+
+
+
+
         //Student code to build the path network from the given pathNodes and Obstacles
         //Obstacles - List of obstacles on the plane
-        //agentWidth - the width of the traversing agent
+        //agentRadius - the radius of the traversing agent
         //pathEdges - out parameter that will contain the edges you build.
-        //  Edges cannot intersect with obstacles. Edges must be at least agentRadius distance
+        //  Edges cannot intersect with obstacles or boundaries. Edges must be at least agentRadius distance
         //  from all obstacle/boundary line segments
 
         public static void Create(Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
-            List<Obstacle> obstacles, float agentRadius, List<Vector2> pathNodes, out List<List<int>> pathEdges)
+            List<Polygon> obstacles, float agentRadius, List<Vector2> pathNodes, out List<List<int>> pathEdges)
         {
 
             //STUDENT CODE HERE
-
-            // Uncomment the following two lines if you want to see solution output
-            // This is assuming you don't modify any of the presets provided, including dragging objects
-            // If the preset doesn't match perfectly, a null solution is presented
-
-            //HardCodedPathNetworkDemo.Create(canvasOrigin, canvasWidth, canvasHeight, obstacles, agentRadius,
-            //    pathNodes, out pathEdges);
-
-            //return;
 
             pathEdges = new List<List<int>>(pathNodes.Count);
 
             for (int i = 0; i < pathNodes.Count; ++i)
             {
-                pathEdges.Add( new List<int>() );
+                pathEdges.Add(new List<int>());
             }
 
 

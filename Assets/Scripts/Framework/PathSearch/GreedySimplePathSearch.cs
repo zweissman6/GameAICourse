@@ -19,7 +19,7 @@ public class GreedySimplePathSearch : PathSearchProvider
         }
     }
 
-    override public PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges,
+    override public PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
         int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
 

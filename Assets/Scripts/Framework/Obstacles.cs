@@ -60,6 +60,27 @@ public class Obstacles : MonoBehaviour
         }
         
     }
+
+
+
+    public void ToggleModelsVisible()
+    {
+
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var o = ((Obstacle)obstacles[i]);
+
+            var mr = o.GetComponent<MeshRenderer>();
+
+            if(mr != null)
+            {
+                mr.enabled = !mr.enabled;
+            }
+        }
+
+    }
+
+
     public List<Obstacle> getObstacles()
     {
         return obstacles;
@@ -81,26 +102,26 @@ public class Obstacles : MonoBehaviour
         }
         return allPoints.ToArray();
     }
-    public Vector2[,] GetLines()
-    {
-        int totalLength = 0;
-        for (int i = 0; i < obstacles.Count; i++)
-        {
-            Vector2[,] obstacleLines = ((Obstacle)obstacles[i]).GetLines();
-            totalLength += obstacleLines.GetLength(0);
-        }
-        Vector2[,] lines = new Vector2[totalLength,2];
-        int k = 0;
-        for (int i = 0; i < obstacles.Count; i++)
-        {
-            Vector2[,] obstacleLines = ((Obstacle)obstacles[i]).GetLines();
-            for ( int j = 0; j < obstacleLines.GetLength(0); j++)
-            {
-                lines[k, 0] = obstacleLines[j, 0];
-                lines[k, 1] = obstacleLines[j, 1];
-                k++;
-            }
-        }
-        return lines;
-    }
+    //public Vector2[,] GetLines()
+    //{
+    //    int totalLength = 0;
+    //    for (int i = 0; i < obstacles.Count; i++)
+    //    {
+    //        Vector2[,] obstacleLines = ((Obstacle)obstacles[i]).GetLines();
+    //        totalLength += obstacleLines.GetLength(0);
+    //    }
+    //    Vector2[,] lines = new Vector2[totalLength,2];
+    //    int k = 0;
+    //    for (int i = 0; i < obstacles.Count; i++)
+    //    {
+    //        Vector2[,] obstacleLines = ((Obstacle)obstacles[i]).GetLines();
+    //        for ( int j = 0; j < obstacleLines.GetLength(0); j++)
+    //        {
+    //            lines[k, 0] = obstacleLines[j, 0];
+    //            lines[k, 1] = obstacleLines[j, 1];
+    //            k++;
+    //        }
+    //    }
+    //    return lines;
+    //}
 }

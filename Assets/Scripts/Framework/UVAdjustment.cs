@@ -8,7 +8,10 @@ public class UVAdjustment : MonoBehaviour
 
     MeshFilter _meshFilter;
 
+    public bool AdjustAtStart = true;
+
     public float BaseScale = 1f;
+
 
     Vector2[] OrigUVs = null;
 
@@ -38,7 +41,10 @@ public class UVAdjustment : MonoBehaviour
 
     void Start()
     {
-        AdjustTextureCoords();
+        if (AdjustAtStart)
+        {
+            AdjustTextureCoords();
+        }
     }
 
 
@@ -53,9 +59,7 @@ public class UVAdjustment : MonoBehaviour
 
     public void AdjustTextureCoords()
     {
-
         var scale = transform.localScale;
-
 
         Vector2[] uvs;
 
@@ -63,10 +67,7 @@ public class UVAdjustment : MonoBehaviour
         {
             Debug.Log("No meshFilter!");
             return;
-        }
-
-
-        
+        }      
 
         if (OrigUVs == null)
         {

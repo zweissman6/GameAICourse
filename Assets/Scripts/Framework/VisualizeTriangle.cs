@@ -52,7 +52,8 @@ public class VisualizeTriangle : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        _renderer.material = Manager.Instance.CustomPolygonMaterial;
+        //_renderer.material = Manager.Instance.CustomPolygonMaterial;
+        _renderer.sharedMaterial = Manager.Instance.CustomPolygonMaterial;
         
         //Debug.Log(Manager.Instance.CustomPolygonMaterial.name);
         //Debug.Log(_renderer.material);

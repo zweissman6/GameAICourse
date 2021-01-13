@@ -14,7 +14,7 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
     List<Vector2> navmeshCentroids = new List<Vector2>();
 
     public Color LineColor = Color.green;
-    public Material LineMaterial;
+    //public Material LineMaterial;
     public Material pathEdgeMat;
     public Material polygonMat;
     List<GameObject> pathNodeObjects = new List<GameObject>();
@@ -41,13 +41,16 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
 
     // Start is called before the first frame update
-    void Start()
+    public override void Start()
     {
-        Utils.DisplayName("CreateNavMesh", CreateNavMesh.StudentAuthorName);
+        base.Start();
 
         Obstacles.Init();
 
         Bake();
+
+        Utils.DisplayName("CreateNavMesh", CreateNavMesh.StudentAuthorName);
+
     }
 
 
@@ -56,10 +59,16 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
         List<Vector2> pnodes;
         List<List<int>> pedges;
 
+        List<Polygon> offsetObst;
+
         CreateNavMesh.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
-            Obstacles.GetObstaclePolygons(), moveBall.Radius, 
-            out VisualizeOriginalTriangles, out VisualizeNavMeshPolygons,
-            out pnodes, out pedges);
+            Obstacles.GetObstaclePolygons(), moveBall.Radius,
+            out offsetObst,
+            out VisualizeOriginalTriangles,           
+            out VisualizeNavMeshPolygons,
+            out pnodes, out pedges
+            
+            );
 
         PathNodes = pnodes;
         PathEdges = pedges;
@@ -67,9 +76,10 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
         CreatePathNodeMarkerObjects(PathNodes);
 
         PurgeOutdatedLineViz();
+        CreateVizOffsetPolys(offsetObst); // TODO remove me
         CreateVizNavMesh();
         CreateVizTriangles();
-        CreateNetworkLines();
+        CreateNetworkLines(Utils.ZOffset);
 
     }
 
@@ -85,6 +95,26 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
             Destroy(linegroup.gameObject);
         }
     }
+
+
+
+    void CreateVizOffsetPolys(List<Polygon> offsetObst)
+    {
+        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
+
+        if (VisualizeNavMeshPolygons == null)
+            return;
+
+        foreach (var poly in offsetObst)
+        {
+            var pts = poly.getPoints();
+            for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
+            {
+                Utils.DrawLine(pts[i], pts[j], Utils.ZOffset + 0.04f, parent, Color.blue, LineMaterial, 0.1f);
+            }
+        }
+    }
+
 
     void CreateVizNavMesh()
     {
@@ -125,45 +155,45 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
         }
     }
 
-    void CreateNetworkLines()
-    {
-        //PurgeOutdatedLineViz();
+    //void CreateNetworkLines()
+    //{
+    //    //PurgeOutdatedLineViz();
 
-        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
+    //    var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, Utils.LineGroupName);
 
-        HashSet<System.Tuple<int, int>> hs = new HashSet<System.Tuple<int, int>>();
+    //    HashSet<System.Tuple<int, int>> hs = new HashSet<System.Tuple<int, int>>();
 
-        if (PathEdges != null)
-        {
-            for (int i = 0; i < PathEdges.Count; ++i)
-            {
-                var pts = PathEdges[i];
-                if (pts != null)
-                {
-                    for (int j = 0; j < pts.Count; ++j)
-                    {
-                        var smaller = i;
-                        var bigger = pts[j];
+    //    if (PathEdges != null)
+    //    {
+    //        for (int i = 0; i < PathEdges.Count; ++i)
+    //        {
+    //            var pts = PathEdges[i];
+    //            if (pts != null)
+    //            {
+    //                for (int j = 0; j < pts.Count; ++j)
+    //                {
+    //                    var smaller = i;
+    //                    var bigger = pts[j];
 
-                        if (bigger < smaller)
-                        {
-                            var tmp = bigger;
-                            bigger = smaller;
-                            smaller = tmp;
-                        }
+    //                    if (bigger < smaller)
+    //                    {
+    //                        var tmp = bigger;
+    //                        bigger = smaller;
+    //                        smaller = tmp;
+    //                    }
 
-                        var tup = new System.Tuple<int, int>(smaller, bigger);
-                        if (!hs.Contains(tup))
-                        {
-                            hs.Add(tup);
-                            Utils.DrawLine(PathNodes[i], PathNodes[pts[j]], Utils.ZOffset, parent, LineColor, LineMaterial);
-                        }
+    //                    var tup = new System.Tuple<int, int>(smaller, bigger);
+    //                    if (!hs.Contains(tup))
+    //                    {
+    //                        hs.Add(tup);
+    //                        Utils.DrawLine(PathNodes[i], PathNodes[pts[j]], Utils.ZOffset, parent, LineColor, LineMaterial);
+    //                    }
 
-                    }
-                }
-            }
-        }
-    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
 
 
     void PurgeGroup(string gname)
@@ -192,7 +222,8 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
         foreach (Vector2 pn in pathNodes)
         {
-            GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, 0, pn.y), Quaternion.identity, parent.transform);
+            GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
+            pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
             pathNodeObjects.Add(pno);
         }
     }

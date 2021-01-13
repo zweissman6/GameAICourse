@@ -6,32 +6,95 @@ using UnityEngine;
 public class Polygon : IEquatable<Polygon>
 {
     Vector2[] points;       //list of all points in the polygon
+    Vector2Int[] intPoints;
     Vector2[,] lines;
     Vector2 minBounds, maxBounds;
+    Vector2Int minIntBounds, maxIntBounds;
     Vector2 centroid;
-    float epsilon = 0.1f;
-    float width, height;
-    
+    Vector2Int intCentroid;
+
+
+    public Vector2 MinBounds
+    {
+        get { return minBounds; }
+        private set { minBounds = value; }
+    }
+
+    public Vector2Int MinIntBounds
+    {
+        get { return minIntBounds; }
+        private set { minIntBounds = value; }
+
+    }
+
+    public Vector2 MaxBounds
+    {
+        get { return maxBounds;  }
+        private set { maxBounds = value; }
+    }
+
+    public Vector2Int MaxIntBounds
+    {
+        get
+        {
+            return maxIntBounds;
+        }
+        private set { maxIntBounds = value; }
+    }
+
     public void Init()
     {
         const float d = 1f;
-        if (points == null) points = new Vector2[] { new Vector2(d, 0f), new Vector2(d,d), new Vector2(d,0f) };
-        calculateBounds();
+        if (points == null) points = new Vector2[] { new Vector2(d, 0f), new Vector2(d, d), new Vector2(0f, 0f) };
+        CreateIntPointsFromPoints();
+        CalculateBounds();
+        
         CreateLines();
         CalculateCentroid();
     }
     public void SetPoints(Vector2[] newPoints)
     {
         points = newPoints;
-        calculateBounds();
+        CreateIntPointsFromPoints();
+        CalculateBounds();
         CreateLines();
         CalculateCentroid();
 
     }
+
+    public void SetIntegerPoints(Vector2Int[] newPoints)
+    {
+        intPoints = newPoints;
+        CreatePointsFromIntPoints();
+        CalculateBounds();
+        CreateLines();
+        CalculateCentroid();
+    }
+
+
     void CalculateCentroid()
     {
-        centroid = Utils.GetCentroid(getPoints());
+        //centroid = Utils.GetCentroid(getPoints());
+        CG.Vector2Double v;
+
+        CG.FindCG(this.intPoints, out v);
+
+        this.centroid = new Vector2((float)(v.x / (double)CG.FloatToIntFactor), (float)(v.y / (double)CG.FloatToIntFactor));
+        this.intCentroid = new Vector2Int((int)System.Math.Round(v.x), (int)System.Math.Round(v.y));
     }
+
+
+    void CreatePointsFromIntPoints()
+    {
+        points = CG.Convert(intPoints);
+    }
+
+
+    void CreateIntPointsFromPoints()
+    {
+        intPoints = CG.Convert(points);
+    }
+
     void CreateLines()
     {
         lines = new Vector2[points.Length, 2];
@@ -46,10 +109,18 @@ public class Polygon : IEquatable<Polygon>
         return centroid;
     }
 
-    public Vector2[,] GetLines()
+    public Vector2Int GetIntCentroid()
     {
-        return lines;
+        return intCentroid;
     }
+
+
+
+    public Vector2Int[] getIntegerPoints()
+    {
+        return intPoints;
+    }
+
 
     public Vector2[] getPoints()
     {
@@ -57,70 +128,52 @@ public class Polygon : IEquatable<Polygon>
     }
 
 
-    public void CalculateBounds(out Vector2 min, out Vector2 max)
+    protected void CalculateBounds()
     {
-        min = float.MaxValue * Vector2.one;
-        max = float.MinValue * Vector2.one;
 
         for (int i = 0; i < points.Length; i++)
         {
-            if (points[i].x < minBounds.x) minBounds.x = points[i].x;
-            if (points[i].x > maxBounds.x) maxBounds.x = points[i].x;
-            if (points[i].y < minBounds.y) minBounds.y = points[i].y;
-            if (points[i].y > maxBounds.y) maxBounds.y = points[i].y;
+            if (points[i].x < minBounds.x)
+            {
+                minBounds.x = points[i].x;
+                minIntBounds.x = intPoints[i].x;
+            }
+            if (points[i].x > maxBounds.x)
+            {
+                maxBounds.x = points[i].x;
+                maxIntBounds.x = intPoints[i].x;
+            }
+            if (points[i].y < minBounds.y)
+            {
+                minBounds.y = points[i].y;
+                minIntBounds.y = intPoints[i].y;
+            }
+            if (points[i].y > maxBounds.y)
+            {
+                maxBounds.y = points[i].y;
+                maxIntBounds.y = intPoints[i].y;
+            }
         }
     }
 
-    void calculateBounds()
-    {
-        minBounds = points[0]; maxBounds = points[0];
-        for (int i = 0; i < points.Length; i++)
-        {
-            if (points[i].x < minBounds.x) minBounds.x = points[i].x;
-            if (points[i].x > maxBounds.x) maxBounds.x = points[i].x;
-            if (points[i].y < minBounds.y) minBounds.y = points[i].y;
-            if (points[i].y > maxBounds.y) maxBounds.y = points[i].y;
-        }
-        minBounds.x -= epsilon; minBounds.y -= epsilon; maxBounds.x += epsilon; maxBounds.y += epsilon;
-    }
 
-
-    // FOR INTERNAL USE ONLY DUE TO THE EPSILON. ONLY MEANT FOR FIRST PASS POINT CONTAINMENT TEST
-    bool inBounds(Vector2 pt)
-    {
-        if (pt.x < minBounds.x || pt.y < minBounds.y || pt.x > maxBounds.x || pt.y > maxBounds.y)
-            return false;
-        return true;
-    }
-
-
-    ////This function does not consider points on the boundary as being on the inside
-    //public bool IsPointInPolygon(Vector2 p)
-    //{
-    //    // first pass axis aligned bounding box test
-    //    if (!inBounds(p)) return false;
-
-    //    bool inside = false;
-    //    for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
-    //    {
-    //        // Short circuit bool eval protects divByZero potential
-    //        if (
-    //            (
-    //            (points[i].y > p.y) != (points[j].y > p.y) ||
-    //            (points[i].y >= p.y) != (points[j].y >= p.y)
-    //            ) &&
-    //             p.x < (points[j].x - points[i].x) * (p.y - points[i].y) / (points[j].y - points[i].y) + points[i].x)
-    //        {
-    //            Debug.Assert((points[j].y - points[i].y) != 0f, "0 DENOM");
-
-    //            inside = !inside;
-    //        }
-    //    }
-    //    return inside;
-    //}
 
 
     // Check if a point is one of the vertices
+    // If the coordinates of p are derived separately that the poly's vertices
+    // then this will possibly fail due to float equality test
+    public bool IsPointAVertex(Vector2Int p)
+    {
+        foreach (var pt in intPoints)
+        {
+            if (p == pt)
+                return true;
+        }
+
+        return false;
+    }
+
+
     public bool IsPointAVertex(Vector2 p)
     {
         foreach (var pt in getPoints())
@@ -132,29 +185,13 @@ public class Polygon : IEquatable<Polygon>
         return false;
     }
 
-    //is the point inside the polygon area
-    //This function is inconsistent regarding points on the boundary as being on the inside
-    public bool IsPointInPolygon(Vector2 p)
-    {
-        // first pass axis aligned bounding box test
-        if (!inBounds(p)) return false;
 
-        bool inside = false;
-        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
-        {
-            // Short circuit bool eval protects divByZero potential
-            if ((points[i].y > p.y) != (points[j].y > p.y) &&
-                 p.x < (points[j].x - points[i].x) * (p.y - points[i].y) / (points[j].y - points[i].y) + points[i].x)
-            {
-                inside = !inside;
-            }
-        }
-        return inside;
-    }
 
-    public bool IsLineInPolygonSameDirection(Vector2 ptA, Vector2 ptB)
+    public bool IsLineSegmentOfPolygonSameDirection(Vector2 ptA, Vector2 ptB)
     {
-        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+        var len = points.Length;
+
+        for (int i = 0, j = len - 1; i < len; j = i++)
         {
             if (ptB == points[i] && ptA == points[j])
                 return true;
@@ -162,9 +199,26 @@ public class Polygon : IEquatable<Polygon>
         return false;
     }
 
-    public bool IsLineInPolygonOppositeDirection(Vector2 ptA, Vector2 ptB)
+
+
+    public bool IsLineSegmentOfPolygonSameDirection(Vector2Int ptA, Vector2Int ptB)
     {
-        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+        var len = intPoints.Length;
+
+        for (int i = 0, j = len - 1; i < len; j = i++)
+        {
+            if (ptA == intPoints[j] && ptB == intPoints[i])
+                return true;
+        }
+        return false;
+    }
+
+
+    public bool IsLineSegmentOfPolygonOppositeDirection(Vector2 ptA, Vector2 ptB)
+    {
+        var len = points.Length;
+
+        for (int i = 0, j = len - 1; i < len; j = i++)
         {
             if (ptA == points[i] && ptB == points[j])
                 return true;
@@ -172,9 +226,24 @@ public class Polygon : IEquatable<Polygon>
         return false;
     }
 
-    public bool IsLineInPolygon(Vector2 ptA, Vector2 ptB)
+
+    public bool IsLineSegmentOfPolygonOppositeDirection(Vector2Int ptA, Vector2Int ptB)
     {
-        for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+        var len = intPoints.Length;
+
+        for (int i = 0, j = len - 1; i < len; j = i++)
+        {
+            if (ptB == intPoints[j] && ptA == intPoints[i])
+                return true;
+        }
+        return false;
+    }
+
+
+    public bool IsLineSegmentOfPolygon(Vector2 ptA, Vector2 ptB)
+    {
+        var len = points.Length;
+        for (int i = 0, j = len - 1; i < len; j = i++)
         {
             if ((ptA == points[i] && ptB == points[j]) ||
                     (ptB == points[i] && ptA == points[j]))
@@ -183,44 +252,37 @@ public class Polygon : IEquatable<Polygon>
         return false;
     }
 
-    public bool IsConvex()
-    {
-        return Utils.IsConvex(this.getPoints());
-    }
 
-    public int GetLength()
+    public bool IsLineSegmentOfPolygon(Vector2Int ptA, Vector2Int ptB)
     {
-        return getPoints().Length;
-    }
-    /**
-     * Returns if the polygon is clockwise
-     * Will only work for convex polygons
-     */
-    public bool IsClockwise()
-    {
-        if (GetLength() < 3)
-            return false;
-        for (int i = 0; i < GetLength(); i++)
+        var len = intPoints.Length;
+        for (int i = 0, j = len - 1; i < len; j = i++)
         {
-            Vector2 l1 = getPoints()[(i + 1) % GetLength()] - getPoints()[i];
-            Vector2 l2 = getPoints()[(i + 2) % GetLength()] - getPoints()[(i + 1) % GetLength()];
-            if (Utils.det(l1, l2) > 0)
+            var ptC = intPoints[j];
+            var ptD = intPoints[i];
+
+            if ((ptA == ptC && ptB == ptD) ||
+                    (ptB == ptC && ptA == ptD))
                 return true;
-            else if (Utils.det(l1, l2) < 0)
-                return false;
-            //if 0 continue
         }
-        Debug.LogError("Error, the polygon was just a straight line");
-        //would ideally raise an exception here
         return false;
     }
 
-    /*
-     * Reverses the direction of this polygon
-     */
+
+    public int GetLength()
+    {
+        return getIntegerPoints().Length;
+    }
+
+    //
+    // Reverses the direction of this polygon
+    //
     public void Reverse()
     {
-        System.Array.Reverse(getPoints());
+        //System.Array.Reverse(this.points);
+        //CreateIntPointsFromPoints();
+        System.Array.Reverse(this.intPoints);
+        CreatePointsFromIntPoints();
     }
 
     public override bool Equals(object obj)
@@ -231,14 +293,85 @@ public class Polygon : IEquatable<Polygon>
     public bool Equals(Polygon other)
     {
         return other != null &&
-               EqualityComparer<Vector2[]>.Default.Equals(points, other.points);
+                CircularBufferEquals(intPoints, other.intPoints);
+               //EqualityComparer<Vector2[]>.Default.Equals(points, other.points);
+    }
+
+    static bool CircularBufferEquals(Vector2Int[] A, Vector2Int[] B)
+    {
+        if (A == null && B == null)
+            return true;
+        if (A == null)
+            return false;
+        if (B == null)
+            return false;
+
+        if (A.Length != B.Length)
+            return false;
+
+        if (A.Length == 0 && B.Length == 0)
+            return true;
+
+        if (B.Length == 0)
+            return false;
+
+        int i;
+        for (i = 0; i < A.Length; ++i)
+        {
+            if (A[i] == B[0])
+            {
+                 break;
+            }
+        }
+
+        if (i >= A.Length)
+            return false;
+
+        for(int j = i, k = 0; k < B.Length; j = (j + 1) % A.Length, ++k)
+        {
+            if (A[j] != B[k])
+                return false;
+        }
+
+        return true;
+    }
+
+    static float SumDot(Vector2Int[] pts)
+    {
+        if (pts == null)
+            return 0f;
+
+        Vector2 tot = Vector2.zero;
+
+        foreach (var p in pts)
+            tot += CG.Convert(p);
+
+        return Vector2.Dot(Vector2.right, tot);
     }
 
     public override int GetHashCode()
     {
         var hashCode = 1410917715;
-        hashCode = hashCode * -1521134295 + EqualityComparer<Vector2[]>.Default.GetHashCode(points);
+        hashCode = hashCode * -1521134295 + EqualityComparer<float>.Default.GetHashCode(SumDot(intPoints));
+        //hashCode = hashCode * -1521134295 + EqualityComparer<Vector2[]>.Default.GetHashCode(points);
 
         return hashCode;
+    }
+
+
+
+    public override string ToString()
+    {
+        string s = "";
+
+
+        foreach(var p in intPoints)
+        {
+            s += $"{p.ToString()}, ";
+        }
+
+
+        return s;
+
     }
 }

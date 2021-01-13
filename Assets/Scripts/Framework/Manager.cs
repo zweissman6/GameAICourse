@@ -39,6 +39,8 @@ public class Manager : MonoBehaviour
                     return BreadthFirstPathSearch.Instance;
                 case PathSearchAlgorithms.DepthFirstSearch:
                     return DepthFirstPathSearch.Instance;
+                case PathSearchAlgorithms.RandomDepthFirstSearch:
+                    return RandomDepthFirstPathSearch.Instance;
                 default:
                     return GreedySimplePathSearch.Instance;
             }

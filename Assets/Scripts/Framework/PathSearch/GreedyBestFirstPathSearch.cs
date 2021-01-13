@@ -23,13 +23,18 @@ public class GreedyBestFirstPathSearch : PathSearchProvider
 
 
 
-    override public PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges,
+    override public PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
     int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
 
-        AStarPathSearchImpl.GCallback NullG = (Vector2 a, Vector2 b) => 0f;
+        CostCallback h;
 
-        return AStarPathSearchImpl.FindPathIncremental(nodes, edges, NullG, AStarPathSearchImpl.Heuristic, startNodeIndex, goalNodeIndex, maxNumNodesToExplore, doInitialization,
+        if (useManhattan)
+            h = AStarPathSearchImpl.HeuristicManhattan;
+        else
+            h = AStarPathSearchImpl.HeuristicEuclidean;
+
+        return AStarPathSearchImpl.FindPathIncremental(nodes, edges, AStarPathSearchImpl.CostNull, h, startNodeIndex, goalNodeIndex, maxNumNodesToExplore, doInitialization,
             ref currentNodeIndex, ref searchNodeRecords, ref openNodes, ref closedNodes, ref returnPath);
 
     }

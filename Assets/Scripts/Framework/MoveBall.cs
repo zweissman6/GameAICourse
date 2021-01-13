@@ -10,13 +10,36 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     private const string PathVizGroupName = "PathViz";
 
+    private const string CurrentNodeGroupName = "CurrentNodeParent";
+
     public float Speed = 1.0f;
+
+    public bool HideSearchViz = false;
+
+    public float IncrementalSearchTimeInterval = 0.0f;
+    protected float LastSearchTime = 0f;
+
+
     Rigidbody rigidBody;
     SphereCollider sphereCollider;
  
     public LayerMask mask;
 
-    IDiscretizedSpace discretizedSpace;
+
+    public GameObject PathBeginPrefab;
+    public GameObject PathEndPrefab;
+    public GameObject PathOpenPrefab;
+    public GameObject PathClosedPrefab;
+    public GameObject PathOpenEmptyPrefab;
+    public GameObject PathClosedEmptyPrefab;
+    public GameObject PathEndWithArrowPrefab;
+    public GameObject PathCurrentPrefab;
+
+    DiscretizedSpaceMonoBehavior discretizedSpace;
+    GameGrid gridSpace;
+
+    //IDiscretizedSpace discretizedSpace;
+
     //the distance at which the path node is reached
     float epsilon = 0.01f;
 
@@ -24,6 +47,18 @@ public class MoveBall : MonoBehaviour, IBallMover
 
 
     public float Radius { get => this.sphereCollider.radius * this.transform.lossyScale.x; }
+
+
+    protected float MarkerSize
+    {
+        get
+        {
+            if (gridSpace != null)
+                return 0.8f * gridSpace.CellSize;
+            else
+                return 2f * Radius;
+        }
+    }
 
     public Vector2 CurrentPosition
     {
@@ -43,6 +78,7 @@ public class MoveBall : MonoBehaviour, IBallMover
     public Color PathColor = Color.gray;
     public Material MarkerLineMaterial;
     public int IncrSearchMaxNodeExplore = 1;
+    public bool UsePathRefinement = false;
 
 
     List<Tuple<Vector2, Vector2>> rawPath;
@@ -52,6 +88,7 @@ public class MoveBall : MonoBehaviour, IBallMover
     bool initSearch = false;
     bool activeSearch = false;
     bool incrementalSearch = false;
+    bool stepSearch = false;
     int nearestGoalNodeIndex = -1;
     int nearestStartNodeIndex = -1;
     //Vector2 startPos;
@@ -61,6 +98,11 @@ public class MoveBall : MonoBehaviour, IBallMover
     Priority_Queue.SimplePriorityQueue<int, float> openNodes = null;
     HashSet<int> closedNodes = null;
     List<int> returnPath = null;
+
+    // These are used for bookkeeping of incremental searches for efficient
+    // drawing of markers
+    HashSet<int> prevClosedNodes = new HashSet<int>();
+    HashSet<int> prevOpenNodes = new HashSet<int>();
 
 
     void Awake()
@@ -79,9 +121,54 @@ public class MoveBall : MonoBehaviour, IBallMover
     void Start()
     {
 
-        discretizedSpace = (IDiscretizedSpace)Manager.Instance.DiscretizedSpace;
+        //discretizedSpace = (IDiscretizedSpace)Manager.Instance.DiscretizedSpace;
+        discretizedSpace = Manager.Instance.DiscretizedSpace;
+
         if (discretizedSpace == null)
             Debug.LogError("path network is null");
+
+        gridSpace = discretizedSpace as GameGrid;
+
+
+        if(PathBeginPrefab == null)
+        {
+            Debug.LogError("PathBeginPrefab is null");
+        }
+
+        if(PathEndPrefab == null)
+        {
+            Debug.LogError("PathEndPrefab is null");
+        }
+
+        if(PathOpenPrefab == null)
+        {
+            Debug.LogError("PathOpenPrefab is null");
+        }
+
+        if(PathClosedPrefab == null)
+        {
+            Debug.LogError("PathClosedPrefab is null");
+        }
+
+        if (PathClosedEmptyPrefab == null)
+        {
+            Debug.LogError("PathClosedEmptyPrefab is null");
+        }
+
+        if (PathOpenEmptyPrefab == null)
+        {
+            Debug.LogError("PathOpenEmptyPrefab is null");
+        }
+
+        if (PathEndWithArrowPrefab == null)
+        {
+            Debug.LogError("PathEndWithArrowPrefab is null");
+        }
+
+        if(PathCurrentPrefab == null)
+        {
+            Debug.LogError("PathCurrentPrefab is null");
+        }
 
         Init();
     }
@@ -92,112 +179,222 @@ public class MoveBall : MonoBehaviour, IBallMover
         currPathIndex = 0;
 
         PurgeOutdatedLineViz();
+        PurgeCurrentNodeViz();
+
+        if (this.discretizedSpace == null)
+        {
+            this.discretizedSpace = Manager.Instance.DiscretizedSpace;
+            gridSpace = discretizedSpace as GameGrid;
+        }
+
+        if (this.discretizedSpace != null)
+        {
+
+            this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
+            this.discretizedSpace.SearchOverlayCamera.Render();
+            this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.Nothing;
+        }
 
     }
 
 
+    PathSearchAlgorithms prevAlg = PathSearchAlgorithms.BreadthFirstSearch;
+
+    
 
     // Update is called once per frame
     void Update()
     {
 
         PathSearchResultType pathResult = PathSearchResultType.InProgress;
- 
+
+        bool searchUpdated = false;
+
+
+        bool nextSearchIncr = false;
+
+
+        // if step search, go next incr
+        if(Input.GetKeyUp(KeyCode.N))
+        {
+            nextSearchIncr = true;
+        }
+
 
         if (activeSearch)
         {
-            if (incrementalSearch)
+            ++DEBUG_activeCount;
+
+
+            if (Manager.Instance.PathSearchAlgorithm != prevAlg)
             {
-                pathResult = Manager.Instance.PathSearchProvider.FindPathIncremental(
-                    discretizedSpace.PathNodes, discretizedSpace.PathEdges, nearestStartNodeIndex, nearestGoalNodeIndex,
-                    IncrSearchMaxNodeExplore, initSearch, ref currentNode, ref searchNodeRecords, ref openNodes,
-                    ref closedNodes, ref returnPath);
+
+                resetSearch();
+                PurgeCurrentNodeViz();
+                PurgeOutdatedLineViz();
+                this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
+                this.discretizedSpace.SearchOverlayCamera.Render();
+                this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.Nothing;
+
+                prevAlg = Manager.Instance.PathSearchAlgorithm;
             }
             else
             {
-                pathResult = Manager.Instance.PathSearchProvider.FindPath(
-                    discretizedSpace.PathNodes, discretizedSpace.PathEdges, nearestStartNodeIndex, nearestGoalNodeIndex,
-                    ref currentNode, ref searchNodeRecords, ref openNodes, ref closedNodes, ref returnPath);
-            }
-        }
 
-        DEBUG_pathResult = pathResult;
-        DEBUG_startIndex = nearestStartNodeIndex;
-        DEBUG_goalIndex = nearestGoalNodeIndex;
+                bool useManhattan = gridSpace != null && gridSpace.GridConn == GridConnectivity.FourWay;
+                //bool useManhattan = false;
 
-        if(nearestStartNodeIndex >= 0 && nearestStartNodeIndex < discretizedSpace.PathEdges.Count) 
-            DEBUG_edgesAtStart = discretizedSpace.PathEdges[nearestStartNodeIndex];
-        if(nearestGoalNodeIndex >= 0 && nearestGoalNodeIndex < discretizedSpace.PathEdges.Count)
-            DEBUG_edgesAtGoal = discretizedSpace.PathEdges[nearestGoalNodeIndex];
-
-        if (initSearch)
-        {
-            //Debug.Log("Search was initialized");
-
-            initSearch = false;
-        }
-
-
-        if(activeSearch)
-        {
-
-            //Debug.Log("Updating search viz");
-
-            PurgeOutdatedLineViz();
-
-            CreateMarkerLines(discretizedSpace.PathNodes[nearestGoalNodeIndex], 0.2f, EndMarkerColor);
-
-            CreateMarkerLines(discretizedSpace.PathNodes[nearestStartNodeIndex], 0.2f, StartMarkerColor);
-
-            CreateSetLines(discretizedSpace.PathNodes, searchNodeRecords, openNodes, closedNodes);
-
-            if (pathResult != PathSearchResultType.InProgress)
-            {
-                //Debug.Log("Ending active search because pathResult was not InProgress: " + pathResult);
-
-                activeSearch = false;
-
-                if (pathResult != PathSearchResultType.InitializationError)
+                if (incrementalSearch)
                 {
+                    if ((stepSearch && nextSearchIncr) ||
+                        (!stepSearch &&
+                            Time.timeSinceLevelLoad > (LastSearchTime + IncrementalSearchTimeInterval)))
+                    {
+                        LastSearchTime = Time.timeSinceLevelLoad;
 
-                    CreatePathLines(returnPath, CurrentPosition, goalPos, pathResult);
+                        pathResult = Manager.Instance.PathSearchProvider.FindPathIncremental(
+                            discretizedSpace.PathNodes, discretizedSpace.PathEdges, useManhattan, nearestStartNodeIndex, nearestGoalNodeIndex,
+                            IncrSearchMaxNodeExplore, initSearch, ref currentNode, ref searchNodeRecords, ref openNodes,
+                            ref closedNodes, ref returnPath);
 
-                    //rawPath = GenerateRawPath(returnPath, CurrentPosition, goalPos, pathResult);
+                        searchUpdated = true;
+                    }
+                }
+                else
+                {
+                    pathResult = Manager.Instance.PathSearchProvider.FindPath(
+                        discretizedSpace.PathNodes, discretizedSpace.PathEdges, useManhattan, nearestStartNodeIndex, nearestGoalNodeIndex,
+                        ref currentNode, ref searchNodeRecords, ref openNodes, ref closedNodes, ref returnPath);
 
-                    var fullPath = GenerateFullPath(returnPath, CurrentPosition, goalPos, pathResult);
-
-                    List<Vector2> refinedPath;
-
-                    var refPathRes = PathRefinement.Refine(
-                        new Vector2(discretizedSpace.Boundary.min.x, discretizedSpace.Boundary.min.z),
-                        discretizedSpace.Boundary.size.x,
-                        discretizedSpace.Boundary.size.z,
-                        Radius,
-                        fullPath,
-                        discretizedSpace.Obstacles.getObstacles(),
-                        1,
-                        0,
-                        out refinedPath);
-
-                    if (refPathRes)
-                        rawPath = GenerateRawPath(refinedPath);
-                    else
-                        rawPath = GenerateRawPath(fullPath);
-
-                    currPathIndex = 0;
-                    pathStartTime = Time.timeSinceLevelLoad;
-
-                    DEBUG_path = returnPath;
-                    DEBUG_rawPath = rawPath;
-
+                    searchUpdated = true;
                 }
             }
-
         }
 
 
+        if (searchUpdated)
+        {
 
-        if(rawPath != null && rawPath.Count > 0 && currPathIndex < rawPath.Count)
+            DEBUG_pathResult = pathResult;
+            DEBUG_startIndex = nearestStartNodeIndex;
+            DEBUG_goalIndex = nearestGoalNodeIndex;
+
+            if (nearestStartNodeIndex >= 0 && nearestStartNodeIndex < discretizedSpace.PathEdges.Count)
+                DEBUG_edgesAtStart = discretizedSpace.PathEdges[nearestStartNodeIndex];
+            if (nearestGoalNodeIndex >= 0 && nearestGoalNodeIndex < discretizedSpace.PathEdges.Count)
+                DEBUG_edgesAtGoal = discretizedSpace.PathEdges[nearestGoalNodeIndex];
+
+            if (initSearch)
+            {
+                //Debug.Log("Search was initialized");
+
+                initSearch = false;
+            }
+
+
+            if (activeSearch)
+            {
+
+
+                //Debug.Log("Updating search viz");
+
+                // TODO with overlay, can probably avoid purging and completely recreating every time.
+                // Especially if switch to circle markers and directional arrows
+
+                PurgeOutdatedLineViz();
+
+                //CreateMarkerLines(discretizedSpace.PathNodes[nearestGoalNodeIndex], 0.2f, EndMarkerColor);
+
+                //CreateMarkerLines(discretizedSpace.PathNodes[nearestStartNodeIndex], 0.2f, StartMarkerColor);
+
+                CreateEndMarker(discretizedSpace.PathNodes[nearestGoalNodeIndex], MarkerSize);
+                CreateStartMarker(discretizedSpace.PathNodes[nearestStartNodeIndex], MarkerSize);
+
+                //Debug.Log("goal marker should be at: " + discretizedSpace.PathNodes[nearestGoalNodeIndex]);
+
+
+                if(!HideSearchViz)
+                    CreateSetMarkers(discretizedSpace.PathNodes, searchNodeRecords, currentNode, openNodes, closedNodes, prevOpenNodes, prevClosedNodes);
+
+
+                // Track previous nodes for an incremental search. Allows for efficient incremental draw
+                prevOpenNodes.Clear();
+                prevClosedNodes.Clear();
+
+                foreach (var n in openNodes)
+                {
+                    if(n != nearestGoalNodeIndex) //always want to redraw the goal for orientation
+                        prevOpenNodes.Add(n);
+                }
+
+                foreach (var n in closedNodes)
+                {
+                    if(n != nearestGoalNodeIndex) //always want to redraw the goal for orientation
+                        prevClosedNodes.Add(n);
+                }
+
+
+                // Check if path complete
+                if (pathResult != PathSearchResultType.InProgress)
+                {
+                    //Debug.Log("Ending active search because pathResult was not InProgress: " + pathResult);
+
+                    activeSearch = false;
+
+                    if (pathResult != PathSearchResultType.InitializationError)
+                    {
+
+                        CreatePathLines(returnPath, CurrentPosition, goalPos, pathResult);
+
+                        //rawPath = GenerateRawPath(returnPath, CurrentPosition, goalPos, pathResult);
+
+                        var fullPath = GenerateFullPath(returnPath, CurrentPosition, goalPos, pathResult);
+
+                        List<Vector2> refinedPath = null;
+
+                        bool refPathRes = false;
+
+                        if (UsePathRefinement)
+                        {
+
+                            refPathRes = PathRefinement.Refine(
+                                new Vector2(discretizedSpace.Boundary.min.x, discretizedSpace.Boundary.min.z),
+                                discretizedSpace.Boundary.size.x,
+                                discretizedSpace.Boundary.size.z,
+                                Radius,
+                                fullPath,
+                                discretizedSpace.Obstacles.getObstacles(),
+                                1,
+                                0,
+                                out refinedPath);
+                        }
+
+                        if (refPathRes)
+                            rawPath = GenerateRawPath(refinedPath);
+                        else
+                            rawPath = GenerateRawPath(fullPath);
+
+                        currPathIndex = 0;
+                        pathStartTime = Time.timeSinceLevelLoad;
+
+                        DEBUG_path = returnPath;
+                        DEBUG_rawPath = rawPath;
+
+                    }
+                }
+
+                discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.Depth;
+                discretizedSpace.SearchOverlayCamera.Render();
+                discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.Nothing;
+
+
+                //PurgeOutdatedLineViz();
+            }
+
+        }
+
+        // move ball along path
+        if (rawPath != null && rawPath.Count > 0 && currPathIndex < rawPath.Count)
         {
             var currPathSegment = rawPath[currPathIndex];
             var currDist = Vector2.Distance(currPathSegment.Item1, currPathSegment.Item2);
@@ -225,6 +422,27 @@ public class MoveBall : MonoBehaviour, IBallMover
             }
 
         }
+
+
+        //clear the current search
+        if(Input.GetKeyUp(KeyCode.C))
+        {
+            activeSearch = false;
+            rawPath = null;
+            PurgeOutdatedLineViz();
+            PurgeCurrentNodeViz();
+            this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
+            this.discretizedSpace.SearchOverlayCamera.Render();
+            this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.Nothing;
+        }
+
+        //toggle hidden search metadata
+        if(Input.GetKeyUp(KeyCode.H))
+        {
+
+            HideSearchViz = !HideSearchViz;
+        }
+
     }
 
 
@@ -273,6 +491,8 @@ public class MoveBall : MonoBehaviour, IBallMover
         return minNodeIndex;
     }
 
+
+    public int DEBUG_activeCount = 0;
     public List<int> DEBUG_path;
     public List<Tuple<Vector2, Vector2>> DEBUG_rawPath;
     public PathSearchResultType DEBUG_pathResult;
@@ -331,59 +551,70 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         }
 
-        nearestGoalNodeIndex = NearestValidNodeIndex(clickLoc);
+        this.nearestGoalNodeIndex = NearestValidNodeIndex(clickLoc);
 
-        if(nearestGoalNodeIndex < 0)
+        if(this.nearestGoalNodeIndex < 0)
         {
             Debug.Log("Not a valid click location");
             return;
         }
 
-        var nearestGoalNode = discretizedSpace.PathNodes[nearestGoalNodeIndex];
+        var nearestGoalNode = discretizedSpace.PathNodes[this.nearestGoalNodeIndex];
 
-        nearestStartNodeIndex = NearestValidNodeIndex(CurrentPosition);
+        this.nearestStartNodeIndex = NearestValidNodeIndex(CurrentPosition);
 
-        if(nearestStartNodeIndex < 0)
+        if(this.nearestStartNodeIndex < 0)
         {
             Debug.Log("Could not assign start location");
             return;
         }
 
-        var nearestStartNode = discretizedSpace.PathNodes[nearestStartNodeIndex];
+        var nearestStartNode = discretizedSpace.PathNodes[this.nearestStartNodeIndex];
 
         //startPos = CurrentPosition;
-        goalPos = clickLoc;
+        this.goalPos = clickLoc;
 
-        CreateMarkerLines(nearestGoalNode, 0.2f, EndMarkerColor);
 
-        CreateMarkerLines(nearestStartNode, 0.2f, StartMarkerColor);
-
+        // Indicates the new search to happen
         initSearch = true;
         activeSearch = true;
         incrementalSearch = !isLeft;
+        stepSearch = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         rawPath = null;
         currPathIndex = 0;
+        currentNode = nearestStartNodeIndex;
+        prevOpenNodes.Clear();
+        prevClosedNodes.Clear();
+        LastSearchTime = Time.timeSinceLevelLoad;
+        prevAlg = Manager.Instance.PathSearchAlgorithm;
 
-        ////TODO Remove all this to Update()
 
-        //PathResultType pathResult;
-        //var path = Manager.Instance.SearchProvider.FindPath(discretizedSpace.PathNodes,
-        //    discretizedSpace.PathEdges, nearestStartNodeIndex, nearestGoalNodeIndex, out pathResult);
+        CreateEndMarker(discretizedSpace.PathNodes[nearestGoalNodeIndex], MarkerSize);
+        CreateStartMarker(discretizedSpace.PathNodes[nearestStartNodeIndex], MarkerSize);
+        CreateCurrentOverlayMarker(nearestStartNode, MarkerSize, 0.08f);
 
-        //CreatePathLines(path, CurrentPosition, clickLoc, pathResult);
+        this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
+        this.discretizedSpace.SearchOverlayCamera.Render();
+        this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.Nothing;
 
-        //rawPath = GenerateRawPath(path, CurrentPosition, clickLoc, pathResult);
-        //currPathIndex = 0;
-        //pathStartTime = Time.timeSinceLevelLoad;
 
-        //DEBUG_path = path;
-        //DEBUG_rawPath = rawPath;
-        //DEBUG_pathResult = pathResult;
-        //DEBUG_startIndex = nearestStartNodeIndex;
-        //DEBUG_goalIndex = nearestGoalNodeIndex;
-        //DEBUG_edgesAtStart = discretizedSpace.PathEdges[nearestStartNodeIndex];
-        //DEBUG_edgesAtGoal = discretizedSpace.PathEdges[nearestGoalNodeIndex];
     }
+
+
+    void resetSearch()
+    {
+
+        rawPath = null;
+        currPathIndex = 0;
+        currentNode = -1;
+        prevOpenNodes.Clear();
+        prevClosedNodes.Clear();
+        incrementalSearch = false;
+        activeSearch = false;
+
+    }
+
+
 
 
     List<Vector2> GenerateFullPath(List<int> path, Vector2 startPos, Vector2 goalPos, PathSearchResultType pathRes)
@@ -449,11 +680,24 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     }
 
+    void PurgeCurrentNodeViz()
+    {
+        //var linegroup = this.transform.Find(PathVizGroupName);
+        var group = GameObject.Find("/" + CurrentNodeGroupName);
+
+        if (group != null)
+        {
+            group.name = "MARKED_FOR_DELETION";
+            group.gameObject.SetActive(false);
+            Destroy(group.gameObject);
+        }
+    }
 
     void PurgeOutdatedLineViz()
     {
 
-        var linegroup = this.transform.Find(PathVizGroupName);
+        //var linegroup = this.transform.Find(PathVizGroupName);
+        var linegroup = GameObject.Find("/" + PathVizGroupName);
 
         if (linegroup != null)
         {
@@ -464,39 +708,92 @@ public class MoveBall : MonoBehaviour, IBallMover
     }
 
 
-    void CreateSetLines(
+    void CreateSetMarkers(
         List<Vector2> nodes,
         Dictionary<int, PathSearchNodeRecord> searchNodeRecords,
+        int currNode,
         Priority_Queue.SimplePriorityQueue<int, float> openNodes,
-        HashSet<int> closedNodes)
+        HashSet<int> closedNodes,
+        HashSet<int> prevOpenNodes,
+        HashSet<int> prevClosedNodes
+        )
     {
 
-        foreach(var nindex in openNodes)
+        float overlayOffset = 0.08f;
+
+        //Debug.Log($"Current node is: {currNode}");
+
+        foreach (var nindex in openNodes)
         {
-            var pindex = searchNodeRecords[nindex].FromNodeIndex;
             var node = nodes[nindex];
+
+            if (nindex == currNode)
+            {
+                //Debug.Log($"Current node drawn: {currNode}");
+                // NOT part of the overlay texture!
+                CreateCurrentOverlayMarker(node, MarkerSize, overlayOffset);
+            }
+
+            if (prevOpenNodes.Contains(nindex))
+                continue;
+
+            var pindex = searchNodeRecords[nindex].FromNodeIndex;
+
             float angle = 0f;
             bool directed = false;
             if (pindex >= 0 && pindex < nodes.Count)
             {
                 var pnode = nodes[pindex];
                 Vector2 flip = new Vector2(1f, -1f);
-                angle = Vector2.SignedAngle(Vector2.right, flip*(pnode - node));
+                angle = Vector2.SignedAngle(Vector2.right, flip * (pnode - node));
                 directed = true;
             }
 
             //Debug.Log("Angle: " + angle);
 
-            if (directed)
-                CreateDirectedMarkerLines(node, 0.1f, Color.white, angle);
-            else
-                CreateMarkerLines(node, 0.1f, Color.white, 0.01f);
+            if (nindex != this.nearestStartNodeIndex)
+            {
+                if (directed)
+                {
+                    //CreateDirectedMarkerLines(node, 0.1f, Color.white, angle);
+
+
+                    if (nindex == this.nearestGoalNodeIndex)
+                    {
+                        CreateEndDirectedMarker(node, MarkerSize, angle);
+                    }
+                    else
+                    {
+                        CreateOpenDirectedMarker(node, MarkerSize, angle);
+                    }
+
+                }
+                else
+                {
+                    //CreateMarkerLines(node, 0.1f, Color.white, 0.01f);
+                    CreateOpenEmptyMarker(node, MarkerSize);
+                }
+            }
+
+
         }
 
         foreach(var nindex in closedNodes)
         {
-            var pindex = searchNodeRecords[nindex].FromNodeIndex;
             var node = nodes[nindex];
+
+            if (nindex == currNode)
+            {
+                //Debug.Log($"Current node drawn: {currNode}");
+                // NOT part of the overlay texture!
+                CreateCurrentOverlayMarker(node, MarkerSize, overlayOffset);
+            }
+
+            if (prevClosedNodes.Contains(nindex))
+                continue;
+
+            var pindex = searchNodeRecords[nindex].FromNodeIndex;
+
             float angle = 0f;
             bool directed = false;
             if (pindex >= 0 && pindex < nodes.Count)
@@ -506,10 +803,31 @@ public class MoveBall : MonoBehaviour, IBallMover
                 angle = Vector2.SignedAngle(Vector2.right, flip*(pnode - node));
                 directed = true;
             }
-            if(directed)
-                CreateDirectedMarkerLines(node, 0.1f, Color.cyan, angle);
-            else
-                CreateMarkerLines(node, 0.1f, Color.white, 0.01f);
+
+            if (nindex != this.nearestStartNodeIndex)
+            {
+                if (directed)
+                {
+                    //CreateDirectedMarkerLines(node, 0.1f, Color.cyan, angle);
+
+
+                    if (nindex == this.nearestGoalNodeIndex)
+                    {
+                        CreateEndDirectedMarker(node, MarkerSize, angle);
+                    }
+                    else
+                    {
+                        CreateClosedDirectedMarker(node, MarkerSize, angle);
+                    }
+
+                }
+                else
+                {
+                    //CreateMarkerLines(node, 0.1f, Color.white, 0.01f);
+                    CreateClosedEmptyMarker(node, MarkerSize);
+                }
+            }
+
         }
 
     }
@@ -517,33 +835,74 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     void CreatePathLines(List<int> path, Vector2 startPos, Vector2 goalPos, PathSearchResultType pathResult)
     {
-        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.3f; //Utils.ZOffset * 1.9f
+
+        //var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+        var parent = Utils.FindOrCreateGameObjectByName(null, PathVizGroupName);
 
         if (path.Count < 1)
             return;
 
-        Utils.DrawLine(startPos, discretizedSpace.PathNodes[path[0]], Utils.ZOffset * 1.9f, parent, PathColor, MarkerLineMaterial);
+        Utils.DrawLine(startPos, discretizedSpace.PathNodes[path[0]], offset, parent, PathColor, MarkerLineMaterial);
 
         for(int i=0; i<path.Count-1; ++i)
         {
             var pn1 = path[i];
             var pn2 = path[i + 1];
 
-            Utils.DrawLine(discretizedSpace.PathNodes[pn1], discretizedSpace.PathNodes[pn2], Utils.ZOffset * 1.9f, parent, PathColor, MarkerLineMaterial);
+            Utils.DrawLine(discretizedSpace.PathNodes[pn1], discretizedSpace.PathNodes[pn2], offset, parent, PathColor, MarkerLineMaterial);
         }
 
         if(pathResult == PathSearchResultType.Complete)
         {
-            Utils.DrawLine(discretizedSpace.PathNodes[path[path.Count-1]], goalPos, Utils.ZOffset * 1.9f, parent, PathColor, MarkerLineMaterial);
+            Utils.DrawLine(discretizedSpace.PathNodes[path[path.Count-1]], goalPos, offset, parent, PathColor, MarkerLineMaterial);
         }
 
     }
 
+    void CreateOpenDirectedMarker(Vector2 pos, float halfWidth, float angleRot)
+    {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f;
+        CreateDirectedMarker(pos, halfWidth, angleRot, offset, PathOpenPrefab);
+    }
+
+    void CreateClosedDirectedMarker(Vector2 pos, float halfWidth, float angleRot)
+    {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f;
+        CreateDirectedMarker(pos, halfWidth, angleRot, offset, PathClosedPrefab);
+    }
+
+
+    void CreateEndDirectedMarker(Vector2 pos, float halfWidth, float angleRot)
+    {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.22f;
+        CreateDirectedMarker(pos, halfWidth, angleRot, offset, PathEndWithArrowPrefab);
+    }
+
+
+    void CreateDirectedMarker(Vector2 pos, float halfWidth, float angleRot, float offset, GameObject markerPrefab)
+    {
+
+        //var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f; //Utils.ZOffset * 2f
+
+        var parent = Utils.FindOrCreateGameObjectByName(null, PathVizGroupName);
+
+        var pos3d = new Vector3(pos.x, offset, pos.y);
+
+        var newMarker = Instantiate(markerPrefab, parent.transform, true);
+        newMarker.transform.position = pos3d;
+        newMarker.transform.rotation = Quaternion.Euler(0f, angleRot, 0f);
+        newMarker.transform.localScale = Vector3.one * halfWidth;
+    }
 
     void CreateDirectedMarkerLines(Vector2 pos, float halfWidth, Color c, float angleRot)
     {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f; //Utils.ZOffset * 2f
+
         float lineWidth = 0.01f;
-        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+        //var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+        var parent = Utils.FindOrCreateGameObjectByName(null, PathVizGroupName);
 
         var rot = Quaternion.Euler(0f, angleRot, 0f);
 
@@ -557,7 +916,7 @@ public class MoveBall : MonoBehaviour, IBallMover
         p2 = pos3d + rot * p2;
 
         Utils.DrawLine(new Vector2(p1.x, p1.z), new Vector2(p2.x, p2.z),
-            Utils.ZOffset * 2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
 
         p1 = new Vector3(0f,0f, -halfWidth / 2f);
         p2 = new Vector3(0f, 0f, halfWidth / 2f);
@@ -566,7 +925,7 @@ public class MoveBall : MonoBehaviour, IBallMover
         p2 = pos3d + rot * p2;
 
         Utils.DrawLine(new Vector2(p1.x, p1.z), new Vector2(p2.x, p2.z),
-            Utils.ZOffset * 2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
 
 
         p1 = new Vector3(0f,0f, halfWidth / 2f);
@@ -576,29 +935,109 @@ public class MoveBall : MonoBehaviour, IBallMover
         p2 = pos3d + rot * p2;
 
         Utils.DrawLine(new Vector2(p1.x, p1.z), new Vector2(p2.x, p2.z),
-            Utils.ZOffset * 2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
+      
+    }
 
-        
+
+    void CreateEndMarker(Vector2 pos, float halfWidth)
+    {
+        //Debug.Log("end marker is being placed at: " + pos);
+
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.21f;
+        CreateMarker(pos, halfWidth, offset, this.PathEndPrefab);
+    }
+
+    void CreateStartMarker(Vector2 pos, float halfWidth)
+    {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.22f;
+        CreateMarker(pos, halfWidth, offset, this.PathBeginPrefab);
+    }
 
 
+    void CreateOpenEmptyMarker(Vector2 pos, float halfWidth)
+    {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f;
+        CreateMarker(pos, halfWidth, offset, this.PathOpenEmptyPrefab);
+    }
+
+    void CreateClosedEmptyMarker(Vector2 pos, float halfWidth)
+    {
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f;
+        CreateMarker(pos, halfWidth, offset, this.PathClosedEmptyPrefab);
+    }
+
+
+    // This will no doubt cause confusion for me in the future. Most of the icons
+    // are rendered to the overlay. But the "current" overlay is a game object seen
+    // by the main camera
+
+
+
+
+    protected GameObject currentMarker = null;
+    GameObject CreateCurrentOverlayMarker(Vector2 pos, float halfWidth, float offset)
+    {
+        //var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.23f;
+
+        var parent = Utils.FindOrCreateGameObjectByName(null, CurrentNodeGroupName);
+
+        if (currentMarker == null)
+            currentMarker = CreateMarker(pos, halfWidth, offset, this.PathCurrentPrefab, parent);
+        else
+        {
+            currentMarker.transform.position = new Vector3(pos.x, offset, pos.y);
+            currentMarker.transform.localScale = Vector3.one * halfWidth;
+        }
+
+        return currentMarker;
+    }
+
+    GameObject CreateMarker(Vector2 pos, float halfWidth, float offset, GameObject markerPrefab)
+    {
+        var parent = Utils.FindOrCreateGameObjectByName(null, PathVizGroupName);
+        return CreateMarker(pos, halfWidth, offset, markerPrefab, parent);
+    }
+
+
+    GameObject CreateMarker(Vector2 pos, float halfWidth, float offset, GameObject markerPrefab, GameObject parent)
+    {
+        //var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f; //Utils.ZOffset * 2f
+
+        //var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+        //var parent = Utils.FindOrCreateGameObjectByName(null, PathVizGroupName);
+
+        var pos3d = new Vector3(pos.x, offset, pos.y);
+
+        var newMarker = Instantiate(markerPrefab, parent.transform, true);
+        newMarker.transform.position = pos3d;
+        newMarker.transform.localScale = Vector3.one * halfWidth;
+
+        //Debug.Log($"{newMarker.name} is positioned at: {newMarker.transform.position}");
+
+        return newMarker;
     }
 
 
     void CreateMarkerLines(Vector2 pos, float halfWidth, Color c, float lineWidth = 0.04f)
     {
-        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+
+        var offset = discretizedSpace.SearchOverlay_OffsetFromFarCP + 0.2f; //Utils.ZOffset * 2f
+
+        //var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathVizGroupName);
+        var parent = Utils.FindOrCreateGameObjectByName(null, PathVizGroupName);
 
         Utils.DrawLine(pos + new Vector2(halfWidth, halfWidth), pos + new Vector2(halfWidth, -halfWidth),
-            Utils.ZOffset*2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
 
         Utils.DrawLine(pos + new Vector2(halfWidth, -halfWidth), pos + new Vector2(-halfWidth, -halfWidth),
-            Utils.ZOffset * 2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
 
         Utils.DrawLine(pos + new Vector2(-halfWidth, -halfWidth), pos + new Vector2(-halfWidth, halfWidth),
-            Utils.ZOffset * 2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
 
         Utils.DrawLine(pos + new Vector2(-halfWidth, halfWidth), pos + new Vector2(halfWidth, halfWidth),
-            Utils.ZOffset * 2, parent, c, MarkerLineMaterial, lineWidth);
+            offset, parent, c, MarkerLineMaterial, lineWidth);
 
     }
 

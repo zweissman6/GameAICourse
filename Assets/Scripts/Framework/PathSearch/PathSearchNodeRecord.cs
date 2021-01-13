@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-public struct PathSearchNodeRecord : IComparable<PathSearchNodeRecord>
+public class PathSearchNodeRecord : IComparable<PathSearchNodeRecord>
 {
     public int NodeIndex { get; set; }
     public int FromNodeIndex { get; set; }

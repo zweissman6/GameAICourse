@@ -5,5 +5,6 @@
     Dijkstra,
     AStar,
     BreadthFirstSearch,
-    DepthFirstSearch
+    DepthFirstSearch,
+    RandomDepthFirstSearch
 };

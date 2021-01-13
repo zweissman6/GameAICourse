@@ -8,7 +8,7 @@ public class CommonPolygons
     public Polygon AB { get; private set; }
     public Polygon BA { get; private set; }
     public CommonPolygonEdge CommonEdge { get; protected set; }
-    public bool IsBarrier { get => (AB == null ^ BA == null);  }
+    public bool IsBarrier { get => ((AB == null) ^ (BA == null));  }
 
     public void ClearABPolygon()
     {
@@ -31,7 +31,7 @@ public class CommonPolygons
         if (p1 == null)
             return false;
 
-        return p1.IsLineInPolygon(CommonEdge.A, CommonEdge.B);
+        return p1.IsLineSegmentOfPolygon(CommonEdge.A, CommonEdge.B);
     }
 
     // Undefined if commonEdge is not in polygon
@@ -40,8 +40,27 @@ public class CommonPolygons
         if (p1 == null)
             return false;
 
-        return p1.IsLineInPolygonSameDirection(CommonEdge.A, CommonEdge.B);
+        return p1.IsLineSegmentOfPolygonSameDirection(CommonEdge.A, CommonEdge.B);
     }
+
+
+
+    bool IsBA(Polygon p1)
+    {
+        if (p1 == null)
+            return false;
+
+        return p1.IsLineSegmentOfPolygonSameDirection(CommonEdge.B, CommonEdge.A);
+    }
+
+
+    // This method has some code that is now pretty crazy from an old attempt to work
+    // with floating point nav mesh building. It is now much more robust and all the
+    // degenerate if-clauses *should* get skipped. The degenerate stuff probably
+    // needs to be deleted!
+    // That said, the whole reason the code is their is because a degenerate triangle
+    // can be flipped AB or BA direction pretty easily. This allows degenerates to
+    // "glue" paths together that would otherwise not form.
 
     public void Add(Polygon p1)
     {
@@ -51,15 +70,22 @@ public class CommonPolygons
         if (!IsEdgeInPolygon(p1))
             throw new ArgumentException("Polygon does not contain edge");
 
-        var p1IsDegenerate = Utils.IsCollinear(p1);
+        //var p1IsDegenerate = Utils.IsCollinear(p1);
+        var p1IsDegenerate = CG.Collinear(p1.getIntegerPoints());
         var ABIsDegenerate = false;
         var BAIsDegenerate = false;
 
         if (AB != null)
-            ABIsDegenerate = Utils.IsCollinear(AB);
+        {
+            //ABIsDegenerate = Utils.IsCollinear(AB);
+            ABIsDegenerate = CG.Collinear(AB.getIntegerPoints());
+        }
 
         if (BA != null)
-            BAIsDegenerate = Utils.IsCollinear(BA);
+        {
+            //BAIsDegenerate = Utils.IsCollinear(BA);
+            BAIsDegenerate = CG.Collinear(BA.getIntegerPoints());
+        }
 
         if (AB != null && BA != null)
         {
@@ -67,7 +93,7 @@ public class CommonPolygons
             {
                 if(p1IsDegenerate)
                 {
-                    Debug.Log("p1IsDegenerate and no room. Skipping");
+                    Debug.LogError("p1IsDegenerate and no room. Skipping");
                 }
                 else
                     throw new OverflowException("Two polygons already set");
@@ -75,7 +101,7 @@ public class CommonPolygons
         }
 
         var isP1ABDir = IsAB(p1);
-
+        var isP1BADir = IsBA(p1);
 
         if(isP1ABDir)
         {
@@ -118,7 +144,7 @@ public class CommonPolygons
                 AB = p1;
             }
         }
-        else
+        else if(isP1BADir)
         {
             if (BA != null)
             {
@@ -159,6 +185,10 @@ public class CommonPolygons
             {
                 BA = p1;
             }
+        }
+        else
+        {
+            throw new ArgumentException("Polygon does not contain edge (even though we think we checked already)");
         }
 
 
