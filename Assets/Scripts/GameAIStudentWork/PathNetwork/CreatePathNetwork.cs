@@ -22,12 +22,26 @@ namespace GameAICourse
         }
 
         // Helper method provided to help you implement this file. Leave as is.
+        // Returns float converted to int according to default scaling factor (1000)
+        public static int Convert(float v)
+        {
+            return CG.Convert(v);
+        }
+
+        // Helper method provided to help you implement this file. Leave as is.
         // Returns true is segment AB intersects CD properly or improperly
         static public bool Intersects(Vector2Int a, Vector2Int b, Vector2Int c, Vector2Int d)
         {
             return CG.Intersect(a, b, c, d);
         }
 
+
+        //Get the shortest distance from a point to a line
+        //Line is defined by the lineStart and lineEnd points
+        public static float DistanceToLineSegment(Vector2Int point, Vector2Int lineStart, Vector2Int lineEnd)
+        {
+            return CG.DistanceToLineSegment(point, lineStart, lineEnd);
+        }
 
         // Helper method provided to help you implement this file. Leave as is.
         //Get the shortest distance from a point to a line

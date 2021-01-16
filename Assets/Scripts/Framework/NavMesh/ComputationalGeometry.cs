@@ -27,6 +27,16 @@ public class CG
         }
     }
 
+    static public int Convert(float v)
+    {
+        return Convert(v, FloatToIntFactor);
+    }
+
+    static public int Convert(float v, int factor)
+    {
+        return Mathf.RoundToInt(v * factor);
+    }
+
 
     static public Vector2Int Convert(Vector2 v)
     {
@@ -1282,27 +1292,58 @@ public class CG
     //}
 
 
-    //Get the shortest distance from a point to a line
-    //Line is defined by the lineStart and lineEnd points
+
+
+
     public static float DistanceToLineSegment(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
     {
-        //If point is beyond the two points of the line, return the shorter distance to the line end points
-        Vector2 ptToA = lineStart - point;
-        Vector2 ptToB = lineEnd - point;
-        if (Vector2.Dot(ptToA, ptToB) > 0)
-        {
-            //point is beyond end points
-            return Mathf.Min(ptToA.magnitude, ptToB.magnitude);
-        }
-        else
-        {
-            //find the perpendicular distance to line
-            Vector2 AB = lineStart - lineEnd;
-            AB.Normalize();
-            float scale = Vector2.Dot(-ptToB, AB);
-            AB.Scale(new Vector2(scale, scale));
-            Vector2 pt = lineEnd + AB;
-            return Vector2.Distance(pt, point);
-        }
+        //Some nice optimizations from Grumdrig https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
+
+        // Return minimum distance between line segment vw and point p
+        float l2 = (lineEnd - lineStart).sqrMagnitude;  // i.e. |w-v|^2 -  avoid a sqrt
+        var lineStartToPoint = point - lineStart;
+        if (l2 == 0.0) return lineStartToPoint.magnitude;   // v == w case
+                                                            // Consider the line extending the segment, parameterized as v + t (w - v).
+                                                            // We find projection of point p onto the line. 
+                                                            // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+                                                            // We clamp t from [0,1] to handle points outside the segment vw.
+        var lineStartToLineEnd = lineEnd - lineStart;
+        float t = Mathf.Max(0f, Mathf.Min(1f, Vector2.Dot(lineStartToPoint, lineStartToLineEnd) / l2));
+        Vector2 projection = lineStart + t * (lineStartToLineEnd);  // Projection falls on the segment
+
+        return Vector2.Distance(point, projection);
     }
+
+
+
+    public static int Dot(Vector2Int a, Vector2Int b)
+    {
+        return a.x * b.x + a.y * b.y;
+    }
+
+    public static float DistanceToLineSegment(Vector2Int point, Vector2Int lineStart, Vector2Int lineEnd)
+    {
+        //Some nice optimizations from Grumdrig https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
+        
+        // Return minimum distance between line segment vw and point p
+        var l2 = (lineEnd - lineStart).sqrMagnitude;  // i.e. |w-v|^2 -  avoid a sqrt
+        var lineStartToPoint = point - lineStart;
+        if (l2 == 0) return lineStartToPoint.magnitude;   // v == w case
+                                                          // Consider the line extending the segment, parameterized as v + t (w - v).
+                                                          // We find projection of point p onto the line. 
+                                                          // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+                                                          // We clamp t from [0,1] to handle points outside the segment vw.
+        var lineStartToLineEnd = new Vector2(lineEnd.x - lineStart.x, lineEnd.y - lineStart.y);
+        //var lineStartToLineEnd = lineEnd - lineStart;
+        float t = Mathf.Max(0f, Mathf.Min(1f, Vector2.Dot(lineStartToPoint, lineStartToLineEnd) / (float)l2));
+        Vector2 projection = lineStart + t * (lineStartToLineEnd);  // Projection falls on the segment
+
+        var dist = Vector2.Distance(point, projection);
+
+        //Debug.Log($"Distance: {dist}");
+
+        return dist;
+    }
+
+
 }
