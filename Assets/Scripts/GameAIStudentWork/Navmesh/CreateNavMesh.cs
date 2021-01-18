@@ -61,10 +61,11 @@ namespace GameAICourse
         }
 
         // Helper method provided to help you implement this file. Leave as is.
-        // Tests if AB is coincident with any edge of any poly in polys
-        static public bool IsLineSegmentCoincidentWithEdgeInPolys(Vector2Int A, Vector2Int B, List<Polygon> polys)
+        // Tests if C is between A and B (first tests if C is collinear with A and B
+        // and then whether C is on the line between A and B
+        static public bool Between(Vector2Int a, Vector2Int b, Vector2Int c)
         {
-            return CG.IsLineSegmentCoincidentWithEdgeInPolys(A, B, polys);
+            return CG.Between(a, b, c);
         }
 
         // Helper method provided to help you implement this file. Leave as is.
@@ -242,10 +243,14 @@ namespace GameAICourse
                         // Be sure to store these IsLineSegmentInPolygons() test results in vars 
                         // since the test is expensive and you need the info later.
                         // After that, each tri edge that is NOT a line/edge in a poly
-                        // should be checked further with IsLineSegmentCoincidentWithEdgeInPolys()
-                        // If any edge is coincident then skip this tri candidate (call continue).
-                        // This test will help stop triangles from forming that block
-                        // adjacencies from forming.
+                        // should be checked further to see if there are any obstacle vertices
+                        // that are ON the tri edge and BETWEEN the start and end point.
+                        // You need to test against all obstacleVertices EXCEPT your two triangle
+                        // edge endpoints. You will probably want to write a helper method
+                        // to do this separately with the three candidate triangle edges.
+                        // Use Between() to test each obstacle vertex against the candidate
+                        // triangle edge. This test is important to get right because
+                        // it will stop triangles from forming that block adjacencies from forming.
 
                         // TODO If the tri candidate has gotten this far, now create
                         // a new Polygon from your tri points. Also, we need to make sure

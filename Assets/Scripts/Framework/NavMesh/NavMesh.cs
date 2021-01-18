@@ -28,6 +28,8 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
     List<Polygon> VisualizeOriginalTriangles;
 
+    public bool ShowPathNodes = true;
+
 
     public override void Awake()
     {
@@ -220,11 +222,15 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
         var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathNodeMarkersGroupName);
 
-        foreach (Vector2 pn in pathNodes)
+
+        if (ShowPathNodes)
         {
-            GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
-            pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
-            pathNodeObjects.Add(pno);
+            foreach (Vector2 pn in pathNodes)
+            {
+                GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
+                pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
+                pathNodeObjects.Add(pno);
+            }
         }
     }
 
