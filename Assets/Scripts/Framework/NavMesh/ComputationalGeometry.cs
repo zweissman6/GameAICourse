@@ -1137,7 +1137,7 @@ public class CG
                     // concave angle on poly
                     if (
                         ( !(!Left(prev, curr, A) && !Left(curr, next, A))) ||
-                        ( !(!Left(prev, curr, A) && !Left(curr, next, A)))
+                        ( !(!Left(prev, curr, B) && !Left(curr, next, B)))
                         )
                     {
                         return true;
