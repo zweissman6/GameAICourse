@@ -58,6 +58,9 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
     public override void Bake()
     {
+
+        base.Bake();
+
         List<Vector2> pnodes;
         List<List<int>> pedges;
 

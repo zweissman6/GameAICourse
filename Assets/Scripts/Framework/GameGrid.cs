@@ -59,6 +59,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     override public void Bake()
     {
+        base.Bake();
 
         bool[,] grid;
         List<Vector2> pathNodes;

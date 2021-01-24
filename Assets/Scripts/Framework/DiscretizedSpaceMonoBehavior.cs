@@ -119,7 +119,12 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
 
     virtual public void Bake()
     {
+        var obst = obstacles.getObstacles();
 
+        foreach(var o in obst)
+        {       
+            o.Init();
+        }
     }
 
 

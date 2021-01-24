@@ -137,6 +137,7 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
 
     public override void Bake()
     {
+        base.Bake();
 
         Init();
 

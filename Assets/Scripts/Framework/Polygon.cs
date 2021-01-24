@@ -130,29 +130,30 @@ public class Polygon : IEquatable<Polygon>
 
     protected void CalculateBounds()
     {
-
+        bool first_point = true;
         for (int i = 0; i < points.Length; i++)
         {
-            if (points[i].x < minBounds.x)
+            if (points[i].x < minBounds.x || first_point)
             {
                 minBounds.x = points[i].x;
                 minIntBounds.x = intPoints[i].x;
             }
-            if (points[i].x > maxBounds.x)
+            if (points[i].x > maxBounds.x || first_point)
             {
                 maxBounds.x = points[i].x;
                 maxIntBounds.x = intPoints[i].x;
             }
-            if (points[i].y < minBounds.y)
+            if (points[i].y < minBounds.y || first_point)
             {
                 minBounds.y = points[i].y;
                 minIntBounds.y = intPoints[i].y;
             }
-            if (points[i].y > maxBounds.y)
+            if (points[i].y > maxBounds.y || first_point)
             {
                 maxBounds.y = points[i].y;
                 maxIntBounds.y = intPoints[i].y;
             }
+            first_point = false;
         }
     }
 
