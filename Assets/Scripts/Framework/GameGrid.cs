@@ -100,7 +100,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
             CreateGrid.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize,
                                 polys, out grid);
 
-            CreateGrid.CreatePathNetworkFromGrid(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.y, CellSize, gridConnectivity,
+            CreateGrid.CreatePathNetworkFromGrid(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, gridConnectivity,
                             grid, out pathNodes, out pathEdges);
         }
 
