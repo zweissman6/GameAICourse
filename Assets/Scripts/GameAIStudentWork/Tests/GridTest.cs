@@ -56,7 +56,7 @@ namespace Tests
             CreateGrid.Create(origin, width, height, cellSize, obstPolys, out grid);
 
             // You could test this method in isolation by providing a hard-coded grid
-            CreateGrid.CreatePathNetworkFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
+            CreateGrid.CreatePathGraphFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
                     out pathNodes, out pathEdges);
 
             // There is that helper method in action
@@ -127,7 +127,7 @@ namespace Tests
             CreateGrid.Create(origin, width, height, cellSize, obstPolys, out grid);
 
             // You could test this method in isolation by providing a hard-coded grid
-            CreateGrid.CreatePathNetworkFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
+            CreateGrid.CreatePathGraphFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
                     out pathNodes, out pathEdges);
 
             BasicGridCheck(grid);

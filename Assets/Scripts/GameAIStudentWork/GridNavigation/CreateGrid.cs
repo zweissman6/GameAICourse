@@ -19,6 +19,14 @@ namespace GameAICourse {
         }
 
         // Helper method provided to help you implement this file. Leave as is.
+        // Returns float converted to int according to default scaling factor (1000)
+        public static int Convert(float v)
+        {
+            return CG.Convert(v);
+        }
+
+
+        // Helper method provided to help you implement this file. Leave as is.
         // Returns Vector2 converted to Vector2Int according to default scaling factor (1000)
         public static Vector2Int Convert(Vector2 v)
         {
@@ -52,7 +60,7 @@ namespace GameAICourse {
         // dir is traversable, the function will return false.
         // returns false if the grid is null, grid rank is not 2 dimensional, or any dimension of grid is zero length
         // returns false if x,y is out of range
-        public static bool Istraversable(bool[,] grid, int x, int y, TraverseDirection dir)
+        public static bool Istraversable(bool[,] grid, int x, int y, TraverseDirection dir, GridConnectivity conn)
         {
 
             // TODO IMPLEMENT
@@ -69,7 +77,7 @@ namespace GameAICourse {
         // pathEdges: graph adjacency list for each graph node. cooresponding index of pathNodes to match
         //      node with its edge list. All nodes must have an edge list (no null list)
         //      entries in each edge list are indices into pathNodes
-        public static void CreatePathNetworkFromGrid(
+        public static void CreatePathGraphFromGrid(
             Vector2 canvasOrigin, float canvasWidth, float canvasHeight, float cellWidth,
             GridConnectivity conn,
             bool[,] grid, out List<Vector2> pathNodes, out List<List<int>> pathEdges
