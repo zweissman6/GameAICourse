@@ -52,6 +52,14 @@ namespace GameAICourse
         }
 
 
+        // Helper method provided to help you implement this file. Leave as is.
+        // Determines if a point is inside/on a CCW polygon and if so returns true. False otherwise.
+        public static bool IsPointInPolygon(Vector2Int[] polyPts, Vector2Int point)
+        {
+            return CG.PointPolygonIntersectionType.Outside != CG.InPoly1(polyPts, point);
+        }
+
+
 
 
         //Student code to build the path network from the given pathNodes and Obstacles

@@ -710,8 +710,8 @@ public class CG
     {
         for(int i=0, j= poly.Length - 1; i < poly.Length; j=i++)
         {
-            if ((A == poly[j] && B == poly[i]) ||
-                (B == poly[j] && A == poly[i]))
+            if ((A.Equals(poly[j]) && B.Equals(poly[i])) ||
+                (B.Equals(poly[j]) && A.Equals(poly[i])))
                 return true;
         }
 
@@ -1086,12 +1086,12 @@ public class CG
                 Vector2Int prev;
                 Vector2Int next;
 
-                if(curr == C)
+                if(curr.Equals(C))
                 {
                     prev = poly[l];
                     next = poly[j];
                 }
-                else if(curr == D)
+                else if(curr.Equals(D))
                 {
                     prev = poly[k];
                     next = poly[i];

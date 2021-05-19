@@ -486,7 +486,6 @@ GameObject:
   - component: {fileID: 534669905}
   - component: {fileID: 534669904}
   - component: {fileID: 534669903}
-  - component: {fileID: 534669906}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -559,18 +558,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
---- !u!114 &534669906
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 534669902}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f1b25bd5dd7f09d4684db792eccc254c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &570354465
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1112,6 +1099,7 @@ MonoBehaviour:
     type: 3}
   NavmeshPolygonPrefab: {fileID: 7757208137252976216, guid: aaa00cfe051a045fcbcfcea34818230a,
     type: 3}
+  ShowPathNodes: 1
 --- !u!1001 &1310860552
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1388,6 +1376,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Speed: 3
+  HideSearchViz: 0
   IncrementalSearchTimeInterval: 0
   mask:
     serializedVersion: 2
@@ -1413,6 +1402,7 @@ MonoBehaviour:
   PathColor: {r: 1, g: 0, b: 0.9694123, a: 1}
   MarkerLineMaterial: {fileID: 2100000, guid: 9977e6920d3cd42c5bb6913f2a1e3fd1, type: 2}
   IncrSearchMaxNodeExplore: 1
+  UsePathRefinement: 0
   DEBUG_activeCount: 0
   DEBUG_path: 
   DEBUG_pathResult: 0

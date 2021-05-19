@@ -32,7 +32,7 @@ namespace GameAICourse
 
         // Helper method provided to help you implement this file. Leave as is.
         // Returns true if there is at least one intersection between A and a polygon in polys
-        public static bool ItersectsConvexPolygons(Polygon A, List<Polygon> polys)
+        public static bool IntersectsConvexPolygons(Polygon A, List<Polygon> polys)
         {
             return CG.IntersectionConvexPolygons(A, polys);
         }
@@ -259,8 +259,8 @@ namespace GameAICourse
 
                         // TODO Next, check if your new tri overlaps the other tris you
                         // have added so far. You will be adding valid tris to origTriangles.
-                        // So, Use ItersectsConvexPolygons()
-                        // If there is an overlap then call continue. Note that ItersectsConvexPolygons
+                        // So, Use IntersectsConvexPolygons()
+                        // If there is an overlap then call continue. Note that IntersectsConvexPolygons
                         // will not return true if the triangles are only touching.
 
                         // TODO After that, you want to see if your new tri encloses any
