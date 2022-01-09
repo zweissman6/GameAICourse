@@ -4,7 +4,10 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+using System.Linq;
+
 using GameAICourse;
+using System.Text;
 
 namespace Tests
 {
@@ -25,8 +28,55 @@ namespace Tests
         }
 
 
+        [Test]
+        public void ExampleTest()
+        {
+            // Set up some parameters for testing
 
-        // TODO Write some tests! See GridTest for more examples
+            Vector2 origin = new Vector2(-5f, -5f);
+            Vector2 size = new Vector2(10f, 10f);
+            List<Polygon> obstacles = new List<Polygon>();
+            float agentRadius = 1f;
+            List<Vector2> pathNodes = new List<Vector2>()
+            {
+                new Vector2(0f, 0f), //<-- In the middle of the canvas
+                new Vector2(4.5f, 0f) //<-- Close to the middle of the right edge of the canvas boundary
+            };
+
+            // output param
+
+            List<List<int>> pathEdges;
+
+
+            //Execute your code!
+
+            CreatePathNetwork.Create(origin, size.x, size.y, obstacles, agentRadius, pathNodes, out pathEdges);
+
+            //Various assertions to validate your returned result
+
+            Assert.That(pathEdges, Is.Not.Null);
+            Assert.That(pathEdges, Has.Count.EqualTo(pathNodes.Count));
+            Assert.That(pathEdges, Is.All.Not.Null);
+
+            for (int i = 0; i < pathEdges.Count; ++i)
+            {
+                var edges = pathEdges[i];
+
+                Debug.Log($"[{i}]:{string.Join(",", edges)}");
+
+                //TODO check for self edges, dupe edges, out of range edge ends, etc...
+
+            }
+
+            // Nodes are not expected to connect because right node is too close to canvas boundary
+
+            Assert.That(pathEdges, Is.All.Empty);
+
+
+            // TODO add more asserts for things not tested in this example
+        }
+
+        // TODO write more tests!
 
 
     }

@@ -28,22 +28,35 @@ namespace Tests
         // You can write helper methods that are called by multiple tests!
         // This method is not itself a test because it is not annotated with [Test].
         // But look below for examples of calling it.
-        void BasicGridCheck(bool [,] grid)
+        void BasicGridCheck(bool[,] grid, float width, float height, float cellSize)
         {
             Assert.That(grid, Is.Not.Null);
             Assert.That(grid.Rank, Is.EqualTo(2), "grid is not a 2D array!");
+
+            var w = grid.GetLength(0);
+            var h = grid.GetLength(1);
+
+            // Parameterized tests can be dangerous. Especially if you implement
+            // an equation to generate the correct values. This may replicate
+            // bugs in the code that you are testing and give a false
+            // indication of correctness!
+            // Be very cautious when doing this...
+            Assert.That(w, Is.EqualTo(Mathf.FloorToInt(width / cellSize)));
+            Assert.That(h, Is.EqualTo(Mathf.FloorToInt(height / cellSize)));
+
         }
 
 
         // You can write parameterized tests for more efficient test coverage!
         // This single method can reflect an arbitrary number of test configurations
         // via the TestCase(...) syntax.
-        // TODO You probably want some more test cases here
+        // TODO You probably want some more test cases here. Maybe a negative origin?
         [TestCase(0f, 0f, 1f, 1f, 1f)]
         [TestCase(0f, 0f, 1f, 1f, 0.25f)]
+        [TestCase(0f, 0f, 1f, 1f, 0.26f)]
         public void TestEmptyGrid(float originx, float originy, float width, float height, float cellSize)
         {
-            
+
             var origin = new Vector2(originx, originy);
 
             bool[,] grid;
@@ -59,13 +72,10 @@ namespace Tests
             CreateGrid.CreatePathGraphFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
                     out pathNodes, out pathEdges);
 
-            // There is that helper method in action
-            BasicGridCheck(grid);
-
+            // Herer is that helper method in action
+            BasicGridCheck(grid, width, height, cellSize);
 
             // TODO Maybe these path tests should be in a helper method of their own...
-
-            // TODO You should probably test for the correct grid size...
 
             Assert.That(pathNodes, Is.Not.Null);
 
@@ -130,7 +140,7 @@ namespace Tests
             CreateGrid.CreatePathGraphFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
                     out pathNodes, out pathEdges);
 
-            BasicGridCheck(grid);
+            BasicGridCheck(grid, width, height, cellSize);
 
 
             // TODO Maybe these path tests should be in a helper method...

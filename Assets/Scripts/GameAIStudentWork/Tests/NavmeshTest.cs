@@ -26,7 +26,9 @@ namespace Tests
 
 
 
-        // TODO Write some tests! See GridTest for more examples
+        // TODO Write some tests! See GridTest and PathNetworkTest for more examples
+        // PathNetworkTest(s) you have previously worked on will be useful
+        // to validate you are creating a good path graph from your navmesh!
 
 
     }
