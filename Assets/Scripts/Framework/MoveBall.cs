@@ -448,12 +448,30 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     int NearestValidNodeIndex(Vector2 v)
     {
+        var vint = CG.Convert(v);
+
         var minDist = float.MaxValue;
         int minNodeIndex = -1;
 
-        for(int i = 0; i < discretizedSpace.PathNodes.Count; ++i)
+        var min = discretizedSpace.Boundary.min;
+        var max = discretizedSpace.Boundary.max;
+       
+        //var origin = discretizedSpace.BottomLeftCornerWCS;
+
+        // Needs to be counterclockwise!
+        Vector2[] polyPts =
+            {
+                   new Vector2(min.x, min.z),
+                   new Vector2(max.x, min.z),
+                   new Vector2(max.x, max.z),
+                   new Vector2(min.x, max.z)
+             };
+
+        for (int i = 0; i < discretizedSpace.PathNodes.Count; ++i)
         {
             var n = discretizedSpace.PathNodes[i];
+
+            var nint = CG.Convert(n);
 
             var dist = Vector2.Distance(v, n);
 
@@ -463,7 +481,16 @@ public class MoveBall : MonoBehaviour, IBallMover
 
                 bool goodPoint = true;
 
-                foreach(var o in discretizedSpace.Obstacles.getObstacles())
+
+                if (CG.InPoly1(polyPts, n) == CG.PointPolygonIntersectionType.Outside)
+                {
+                    //Debug.Log("Node can't be outside boundary");
+                    goodPoint = false;
+                    continue;
+                }
+
+
+                foreach (var o in discretizedSpace.Obstacles.getObstacles())
                 {
                     if(o.IsPointInPolygon(n))
                     {
@@ -471,7 +498,8 @@ public class MoveBall : MonoBehaviour, IBallMover
                         goodPoint = false;
                         break;
                     }
-                    else if(Utils.Intersects(v,n, o.GetPolygon()))
+                    //else if(Utils.Intersects(v,n, o.GetPolygon()))
+                    else if(CG.IntersectionLineSegmentWithPolygon(vint, nint, o.GetIntegerPoints()))
                     {
                         //Debug.Log("No line of sight");
                         goodPoint = false;
@@ -505,7 +533,9 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     static bool ballTooClose(Vector2 testPos, Vector2 lineposA, Vector2 lineposB, float ballRadius)
     {
-        var d = Utils.DistanceToLine(testPos, lineposA, lineposB);
+        //var d = Utils.DistanceToLine(testPos, lineposA, lineposB);
+
+        var d = CG.DistanceToLineSegment(testPos, lineposA, lineposB);
 
         return (d <= ballRadius);
         
@@ -517,24 +547,43 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         var clickLoc = new Vector2(hit.point.x, hit.point.z);
 
-        foreach(var o in discretizedSpace.Obstacles.getObstacles())
+
+        var min = discretizedSpace.Boundary.min;
+        var max = discretizedSpace.Boundary.max;
+
+        //var origin = discretizedSpace.BottomLeftCornerWCS;
+
+        // Needs to be counterclockwise!
+        Vector2[] polyPts =
+            {
+                   new Vector2(min.x, min.z),
+                   new Vector2(max.x, min.z),
+                   new Vector2(max.x, max.z),
+                   new Vector2(min.x, max.z)
+             };
+
+        if (CG.InPoly1(polyPts, clickLoc) == CG.PointPolygonIntersectionType.Outside)
+        {
+            Debug.Log("Ball can't go outside boundary");
+            return;
+        }
+
+
+        if (
+            ballTooClose(clickLoc, new Vector2(min.x, min.z), new Vector2(max.x, min.z), Radius) ||
+            ballTooClose(clickLoc, new Vector2(max.x, min.z), new Vector2(max.x, max.z), Radius) ||
+            ballTooClose(clickLoc, new Vector2(max.x, max.z), new Vector2(min.x, max.z), Radius) ||
+            ballTooClose(clickLoc, new Vector2(min.x, max.z), new Vector2(min.x, min.z), Radius))
+        {
+            Debug.Log("Ball can't fit here");
+            return;
+        }
+
+
+        foreach (var o in discretizedSpace.Obstacles.getObstacles())
         {
             //cannot click inside a shape since those can be dragged and catch the mouse
             //but if that changes...
-
-            var min = discretizedSpace.Boundary.min;
-            var max = discretizedSpace.Boundary.max;
-
-            if (
-                ballTooClose(clickLoc, new Vector2(min.x, min.z), new Vector2(max.x, min.z), Radius) ||
-                ballTooClose(clickLoc, new Vector2(max.x, min.z), new Vector2(max.x, max.z), Radius) ||
-                ballTooClose(clickLoc, new Vector2(max.x, max.z), new Vector2(min.x, max.z), Radius) ||
-                ballTooClose(clickLoc, new Vector2(min.x, max.z), new Vector2(min.x, min.z), Radius) )
-            {
-                Debug.Log("Ball cant fit here");
-                return;
-            }
-
 
             var pts = o.GetPoints();
             for(int i = 0, j = pts.Length-1; i<pts.Length; j = i++ )

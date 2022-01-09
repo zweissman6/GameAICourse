@@ -35,11 +35,17 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
     {
         base.Start();
 
-        Obstacles.Init();
+        // Following commented out because presets will immediately override...
 
-        Bake();
+        //Obstacles.Init();
 
-        Utils.DisplayName("CreatePathNetwork", CreatePathNetwork.StudentAuthorName);
+        //Bake();
+
+        if (UseHardCodedCases)
+            Utils.DisplayName("CreatePathNetwork", "HARD CODED CASES");
+        else
+            Utils.DisplayName("CreatePathNetwork", CreateGrid.StudentAuthorName);
+
     }
 
 
@@ -187,6 +193,7 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
             //}
             //PathEdges = pathEdges;
 
+            //Debug.Log("PathNetwork: calling student code!");
 
             CreatePathNetwork.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
                                         polys, moveBall.Radius, PathNodes, out pathEdges);

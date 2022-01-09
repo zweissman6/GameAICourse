@@ -47,9 +47,12 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
     {
         base.Start();
 
-        Obstacles.Init();
 
-        Bake();
+        // Following commented out because presets will immediately override...
+
+        //Obstacles.Init();
+
+        //Bake();
 
         Utils.DisplayName("CreateNavMesh", CreateNavMesh.StudentAuthorName);
 
@@ -65,6 +68,8 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
         List<List<int>> pedges;
 
         List<Polygon> offsetObst;
+
+        //Debug.Log("NavMesh: calling student code!");
 
         CreateNavMesh.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
             Obstacles.GetObstaclePolygons(), moveBall.Radius,

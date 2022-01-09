@@ -94,10 +94,10 @@ public class PresetConfig : MonoBehaviour
 
     bool LoadConfig(int pos)
     {
-        
 
         if (pos >= 0 && pos < SceneConfigs.Count)
         {
+
             var sc = SceneConfigs[pos];
 
             Configure(sc.WorldSize, sc.WorldOrigin, sc.AgentPos, sc.AgentScale, sc.ObstacleConfigs, sc.PathNodes, sc.GridCellSize, sc.NumExtraPathNodes, sc.Seed);
@@ -116,35 +116,38 @@ public class PresetConfig : MonoBehaviour
     {
         int pos = -1;
 
-        if (Input.GetKeyUp(KeyCode.Alpha1))
+        if (Input.GetKeyUp(KeyCode.Alpha1) || Input.GetKeyUp(KeyCode.Keypad1))
             pos = 0;
-        if (Input.GetKeyUp(KeyCode.Alpha2))
+        if (Input.GetKeyUp(KeyCode.Alpha2) || Input.GetKeyUp(KeyCode.Keypad2))
             pos = 1;
-        if (Input.GetKeyUp(KeyCode.Alpha3))
+        if (Input.GetKeyUp(KeyCode.Alpha3) || Input.GetKeyUp(KeyCode.Keypad3))
             pos = 2;
-        if (Input.GetKeyUp(KeyCode.Alpha4))
+        if (Input.GetKeyUp(KeyCode.Alpha4) || Input.GetKeyUp(KeyCode.Keypad4))
             pos = 3;
-        if (Input.GetKeyUp(KeyCode.Alpha5))
+        if (Input.GetKeyUp(KeyCode.Alpha5) || Input.GetKeyUp(KeyCode.Keypad5))
             pos = 4;
-        if (Input.GetKeyUp(KeyCode.Alpha6))
+        if (Input.GetKeyUp(KeyCode.Alpha6) || Input.GetKeyUp(KeyCode.Keypad6))
             pos = 5;
-        if (Input.GetKeyUp(KeyCode.Alpha7))
+        if (Input.GetKeyUp(KeyCode.Alpha7) || Input.GetKeyUp(KeyCode.Keypad7))
             pos = 6;
-        if (Input.GetKeyUp(KeyCode.Alpha8))
+        if (Input.GetKeyUp(KeyCode.Alpha8) || Input.GetKeyUp(KeyCode.Keypad8))
             pos = 7;
-        if (Input.GetKeyUp(KeyCode.Alpha9))
+        if (Input.GetKeyUp(KeyCode.Alpha9) || Input.GetKeyUp(KeyCode.Keypad9))
             pos = 8;
-        if (Input.GetKeyUp(KeyCode.Alpha0))
+        if (Input.GetKeyUp(KeyCode.Alpha0) || Input.GetKeyUp(KeyCode.Keypad0))
             pos = 9;
 
 
         if (pos > -1)
         {
+            Debug.Log($"Loading preset position: {pos}");
 
             if (!LoadConfig(pos))
                 Debug.Log("Config " + pos + " doesn't exist!");
             else
+            {
                 return;
+            }
         }
 
 

@@ -43,11 +43,15 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
     {
         base.Start();
 
-        Obstacles.Init();
+        // Following commented out because presets will immediately override...
+        //Obstacles.Init();
 
-        Bake();
+        //Bake();
 
-        Utils.DisplayName("CreateGrid", CreateGrid.StudentAuthorName);
+        if(UseHardCodedCases)
+             Utils.DisplayName("CreateGrid", "HARD CODED CASES");
+        else
+            Utils.DisplayName("CreateGrid", CreateGrid.StudentAuthorName);
 
     }
 
@@ -96,6 +100,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
             //pathEdges = new List<List<int>>();
             //grid = new bool[1, 1];
             //grid[0, 0] = true;
+
+            //Debug.Log("Grid: calling student code!");
 
             CreateGrid.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize,
                                 polys, out grid);

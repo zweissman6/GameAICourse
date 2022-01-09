@@ -434,7 +434,7 @@ public class CG
         if (polylen < 3)
             return true;
 
-        for(int i = 0; i < polylen -3; ++i)
+        for(int i = 0; i < polylen - 2; ++i)
         {
             var p1 = poly[i];
             var p2 = poly[i + 1];
