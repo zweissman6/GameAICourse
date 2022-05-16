@@ -1,4 +1,5 @@
-﻿using System.Collections;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -60,30 +61,17 @@ namespace Tests
             var origin = new Vector2(originx, originy);
 
             bool[,] grid;
-            List<Vector2> pathNodes;
-            List<List<int>> pathEdges;
+
             List<Polygon> obstPolys = new List<Polygon>();
 
 
             // Here is an example of testing code you are working on by calling it!
             CreateGrid.Create(origin, width, height, cellSize, obstPolys, out grid);
 
-            // You could test this method in isolation by providing a hard-coded grid
-            CreateGrid.CreatePathGraphFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
-                    out pathNodes, out pathEdges);
 
             // Herer is that helper method in action
             BasicGridCheck(grid, width, height, cellSize);
 
-            // TODO Maybe these path tests should be in a helper method of their own...
-
-            Assert.That(pathNodes, Is.Not.Null);
-
-            Assert.That(pathEdges, Is.Not.Null);
-            Assert.That(pathEdges, Has.All.Not.Null);
-
-            Assert.That(pathNodes.Count, Is.EqualTo(pathEdges.Count),
-                "Every pathNode must have a pathEdge list!");
 
             Assert.That(grid, Has.All.True,
                 "There aren't any obstacles to block the grid cells!");
@@ -102,8 +90,7 @@ namespace Tests
             var origin = new Vector2(originx, originy);
 
             bool[,] grid;
-            List<Vector2> pathNodes;
-            List<List<int>> pathEdges;
+ 
             List<Polygon> obstPolys = new List<Polygon>();
 
             // Let's make an obstacle in this test...
@@ -136,27 +123,33 @@ namespace Tests
             // Here is an example of testing code you are working on!
             CreateGrid.Create(origin, width, height, cellSize, obstPolys, out grid);
 
-            // You could test this method in isolation by providing a hard-coded grid
-            CreateGrid.CreatePathGraphFromGrid(origin, width, height, cellSize, GridConnectivity.FourWay, grid,
-                    out pathNodes, out pathEdges);
-
+     
             BasicGridCheck(grid, width, height, cellSize);
-
-
-            // TODO Maybe these path tests should be in a helper method...
-            Assert.That(pathNodes, Is.Not.Null);
-
-            Assert.That(pathEdges, Is.Not.Null);
-            Assert.That(pathEdges, Has.All.Not.Null);
-
-            Assert.That(pathNodes.Count, Is.EqualTo(pathEdges.Count),
-                "Every pathNode must have a pathEdge list!");
 
             Assert.That(grid, Has.All.False,
                 "There is a big obstacle that should have blocked the entire grid!");
 
             // TODO This method can be extended with more rigorous testing...
 
+        }
+
+        // This test checks the functionality of your IsTraversable() method.
+        // It's very important that this method works correctly. You will
+        // need to test it a lot more than just this simple example test.
+        [TestCase(true)]
+        [TestCase(false)]
+        public void TestTraversableWithSingleGridCell(bool gridCellState)
+        {
+            bool[,] grid = new bool[1, 1];
+
+            grid[0, 0] = gridCellState;
+
+            // Test all possible directions
+            foreach (var dir in (TraverseDirection[])Enum.GetValues(typeof(TraverseDirection)))
+            {          
+                var res = CreateGrid.IsTraversable(grid, 0, 0, dir);
+                Assert.That(res, Is.False, $"Traverability in dir: {dir} expected to be false but wasn't");
+            }
         }
 
 

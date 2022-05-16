@@ -70,7 +70,10 @@ namespace GameAICourse
 
 
 
-        public static PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges,
+        public static PathSearchResultType FindPathIncremental(
+            GetNodeCount getNodeCount,
+            GetNode getNode,
+            GetNodeAdjacencies getAdjacencies,
             CostCallback G,
             CostCallback H,
             int startNodeIndex, int goalNodeIndex,
@@ -80,14 +83,15 @@ namespace GameAICourse
             ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
         {
             PathSearchResultType pathResult = PathSearchResultType.InProgress;
-            if (nodes == null || startNodeIndex >= nodes.Count || goalNodeIndex >= nodes.Count ||
-                edges == null || startNodeIndex >= edges.Count || goalNodeIndex >= edges.Count ||
-                edges.Count != nodes.Count ||
+
+            var nodeCount = getNodeCount();
+
+            if (startNodeIndex >= nodeCount || goalNodeIndex >= nodeCount ||
                 startNodeIndex < 0 || goalNodeIndex < 0 ||
                 maxNumNodesToExplore <= 0 ||
                 (!doInitialization &&
                  (openNodes == null || closedNodes == null || currentNodeIndex < 0 ||
-                  currentNodeIndex >= nodes.Count || currentNodeIndex >= edges.Count)))
+                  currentNodeIndex >= nodeCount )))
 
                 return PathSearchResultType.InitializationError;
 

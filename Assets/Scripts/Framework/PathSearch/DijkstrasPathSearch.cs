@@ -20,11 +20,23 @@ public class DijkstrasPathSearch : PathSearchProvider
         }
     }
 
-    override public PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
+    override public PathSearchResultType FindPathIncremental(
+        //List<Vector2> nodes,
+        //List<List<int>> edges,
+        GetNodeCount getNodeCount,
+        GetNode getNode,
+        GetNodeAdjacencies adjacencies,
+        bool useManhattan,
         int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
 
-        return AStarPathSearchImpl.FindPathIncremental(nodes, edges, AStarPathSearchImpl.Cost, AStarPathSearchImpl.HeuristicNull, startNodeIndex, goalNodeIndex, maxNumNodesToExplore, doInitialization,
+        return AStarPathSearchImpl.FindPathIncremental(
+            //nodes,
+            //edges,
+            getNodeCount,
+            getNode,
+            adjacencies,
+            AStarPathSearchImpl.Cost, AStarPathSearchImpl.HeuristicNull, startNodeIndex, goalNodeIndex, maxNumNodesToExplore, doInitialization,
             ref currentNodeIndex, ref searchNodeRecords, ref openNodes, ref closedNodes, ref returnPath);
 
     }

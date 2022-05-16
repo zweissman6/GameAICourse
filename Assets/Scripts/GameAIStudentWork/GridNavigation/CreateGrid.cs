@@ -58,55 +58,15 @@ namespace GameAICourse {
         // Istraversable(): returns true if the grid is traversable from grid[x,y] in the direction dir, false otherwise.
         // The grid boundaries are not traversable. If the grid position x,y is itself not traversable but the grid cell in direction
         // dir is traversable, the function will return false.
-        // returns false if the grid is null, grid rank is not 2 dimensional, or any dimension of grid is zero length
+        // returns false if the grid is null, or any dimension of grid is zero length
         // returns false if x,y is out of range
-        public static bool Istraversable(bool[,] grid, int x, int y, TraverseDirection dir, GridConnectivity conn)
+        public static bool IsTraversable(bool[,] grid, int x, int y, TraverseDirection dir)
         {
 
             // TODO IMPLEMENT
 
             //placeholder logic to be replaced by the student
             return true;
-        }
-
-
-        // CreatePathNetworkFromGrid(): Creates a path network from a grid according to traversability
-        // from one node to an adjacent node. Each node should be centered in the cell.
-        // Edges from A to B should always have a matching B to A edge
-        // pathNodes: a list of graph nodes, centered on each cell
-        // pathEdges: graph adjacency list for each graph node. cooresponding index of pathNodes to match
-        //      node with its edge list. All nodes must have an edge list (no null list)
-        //      entries in each edge list are indices into pathNodes
-        public static void CreatePathGraphFromGrid(
-            Vector2 canvasOrigin, float canvasWidth, float canvasHeight, float cellWidth,
-            GridConnectivity conn,
-            bool[,] grid, out List<Vector2> pathNodes, out List<List<int>> pathEdges
-            )
-        {
-
-            if (grid == null || grid.Rank != 2)
-            {
-                pathNodes = new List<Vector2>();
-                pathEdges = new List<List<int>>();
-                return;
-            }
-
-            // TODO IMPLEMENT
-
-
-            pathNodes = new List<Vector2>();
-
-
-            //example of node placed in center of cell
-            pathNodes.Add(canvasOrigin + new Vector2(cellWidth / 2f, cellWidth / 2f));
-
-            //initalization of a path edge that corresponds to same index pathNode
-            pathEdges = new List<List<int>>();
-
-            //only one node, so can't be connected to anything, but we still initialize
-            //to an empty list. Null not allowed!
-            pathEdges.Add(new List<int>());
-
         }
 
         // Create(): Creates a grid lattice discretized space for navigation.

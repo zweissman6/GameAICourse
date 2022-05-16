@@ -13,9 +13,9 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
 
     public Obstacles Obstacles { get => obstacles; protected set => obstacles = value; }
 
-    public List<Vector2> PathNodes { get => pathNodes; protected set => pathNodes = value; }
+    protected List<Vector2> PathNodes { get => pathNodes;  set => pathNodes = value; }
 
-    public List<List<int>> PathEdges { get => pathEdges; protected set => pathEdges = value; }
+    protected List<List<int>> PathEdges { get => pathEdges;  set => pathEdges = value; }
 
     public List<GameObject> PathNodeMarkers { get => pathNodeMarkers; protected set => pathNodeMarkers = value; }
 
@@ -127,6 +127,28 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
         }
     }
 
+    virtual public int GetNodeCount()
+    {
+        if (PathNodes == null)
+            return 0;
+
+        return PathNodes.Count;
+    }
+
+    virtual public Vector2 GetNode(int nodeIndex)
+    {
+        if (PathNodes == null)
+            return Vector2.zero;
+
+        return PathNodes[nodeIndex];
+    }
+
+    virtual public List<int> GetAdjacencies(int nodeIndex)
+    {
+        var edges = PathEdges[nodeIndex];
+
+        return edges;
+    }
 
 
     virtual protected void CreateNetworkLines(float offset)
@@ -141,11 +163,12 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
         Dictionary<System.Tuple<int, int>, System.Tuple<Vector2, Vector2>> dc = new Dictionary<System.Tuple<int, int>, System.Tuple<Vector2, Vector2>>();
 
 
-        if (PathEdges != null)
-        {
-            for (int i = 0; i < PathEdges.Count; ++i)
+        //if (PathNodes != null)
+        //{
+            for (int i = 0; i < GetNodeCount(); ++i)
             {
-                var pts = PathEdges[i];
+                //var pts = PathEdges[i];
+                var pts = GetAdjacencies(i);
                 if (pts != null)
                 {
                     for (int j = 0; j < pts.Count; ++j)
@@ -163,12 +186,14 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
                         var tup = new System.Tuple<int, int>(smaller, bigger);
                         if (!dc.ContainsKey(tup))
                         {
-                            dc.Add(tup, new System.Tuple<Vector2, Vector2>(PathNodes[i], PathNodes[pts[j]]));
-                        }
+                        //dc.Add(tup, new System.Tuple<Vector2, Vector2>(PathNodes[i], PathNodes[pts[j]]));
+                        dc.Add(tup, new System.Tuple<Vector2, Vector2>(GetNode(i), GetNode(pts[j])));
+                    }
                         else
                         {
-                            Utils.DrawLine(PathNodes[i], PathNodes[pts[j]], offset, parent, PathNetworkLineColor, LineMaterial);
-                            dc.Remove(tup);
+                        //Utils.DrawLine(PathNodes[i], PathNodes[pts[j]], offset, parent, PathNetworkLineColor, LineMaterial);
+                        Utils.DrawLine(GetNode(i), GetNode(pts[j]), offset, parent, PathNetworkLineColor, LineMaterial);
+                        dc.Remove(tup);
                         }
 
                     }
@@ -180,7 +205,7 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
                 var endpts = dc[key];
                 Utils.DrawLine(endpts.Item1, endpts.Item2, offset, parent, BrokenPathNetworkLineColor, LineMaterial);
             }
-        }
+        //}
     }
 
 

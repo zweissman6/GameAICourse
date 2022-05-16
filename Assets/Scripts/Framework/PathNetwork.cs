@@ -44,7 +44,7 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
         if (UseHardCodedCases)
             Utils.DisplayName("CreatePathNetwork", "HARD CODED CASES");
         else
-            Utils.DisplayName("CreatePathNetwork", CreateGrid.StudentAuthorName);
+            Utils.DisplayName("CreatePathNetwork", CreatePathNetwork.StudentAuthorName);
 
     }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -22,7 +22,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     Rigidbody rigidBody;
     SphereCollider sphereCollider;
- 
+
     public LayerMask mask;
 
 
@@ -130,22 +130,22 @@ public class MoveBall : MonoBehaviour, IBallMover
         gridSpace = discretizedSpace as GameGrid;
 
 
-        if(PathBeginPrefab == null)
+        if (PathBeginPrefab == null)
         {
             Debug.LogError("PathBeginPrefab is null");
         }
 
-        if(PathEndPrefab == null)
+        if (PathEndPrefab == null)
         {
             Debug.LogError("PathEndPrefab is null");
         }
 
-        if(PathOpenPrefab == null)
+        if (PathOpenPrefab == null)
         {
             Debug.LogError("PathOpenPrefab is null");
         }
 
-        if(PathClosedPrefab == null)
+        if (PathClosedPrefab == null)
         {
             Debug.LogError("PathClosedPrefab is null");
         }
@@ -165,7 +165,7 @@ public class MoveBall : MonoBehaviour, IBallMover
             Debug.LogError("PathEndWithArrowPrefab is null");
         }
 
-        if(PathCurrentPrefab == null)
+        if (PathCurrentPrefab == null)
         {
             Debug.LogError("PathCurrentPrefab is null");
         }
@@ -200,7 +200,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     PathSearchAlgorithms prevAlg = PathSearchAlgorithms.BreadthFirstSearch;
 
-    
+
 
     // Update is called once per frame
     void Update()
@@ -215,7 +215,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
 
         // if step search, go next incr
-        if(Input.GetKeyUp(KeyCode.N))
+        if (Input.GetKeyUp(KeyCode.N))
         {
             nextSearchIncr = true;
         }
@@ -253,7 +253,12 @@ public class MoveBall : MonoBehaviour, IBallMover
                         LastSearchTime = Time.timeSinceLevelLoad;
 
                         pathResult = Manager.Instance.PathSearchProvider.FindPathIncremental(
-                            discretizedSpace.PathNodes, discretizedSpace.PathEdges, useManhattan, nearestStartNodeIndex, nearestGoalNodeIndex,
+                            //discretizedSpace.PathNodes,
+                            //discretizedSpace.PathEdges,
+                            discretizedSpace.GetNodeCount,
+                            discretizedSpace.GetNode,
+                            discretizedSpace.GetAdjacencies,
+                            useManhattan, nearestStartNodeIndex, nearestGoalNodeIndex,
                             IncrSearchMaxNodeExplore, initSearch, ref currentNode, ref searchNodeRecords, ref openNodes,
                             ref closedNodes, ref returnPath);
 
@@ -263,7 +268,12 @@ public class MoveBall : MonoBehaviour, IBallMover
                 else
                 {
                     pathResult = Manager.Instance.PathSearchProvider.FindPath(
-                        discretizedSpace.PathNodes, discretizedSpace.PathEdges, useManhattan, nearestStartNodeIndex, nearestGoalNodeIndex,
+                        //discretizedSpace.PathNodes,
+                        //discretizedSpace.PathEdges,
+                        discretizedSpace.GetNodeCount,
+                        discretizedSpace.GetNode,
+                        discretizedSpace.GetAdjacencies,
+                        useManhattan, nearestStartNodeIndex, nearestGoalNodeIndex,
                         ref currentNode, ref searchNodeRecords, ref openNodes, ref closedNodes, ref returnPath);
 
                     searchUpdated = true;
@@ -279,10 +289,12 @@ public class MoveBall : MonoBehaviour, IBallMover
             DEBUG_startIndex = nearestStartNodeIndex;
             DEBUG_goalIndex = nearestGoalNodeIndex;
 
-            if (nearestStartNodeIndex >= 0 && nearestStartNodeIndex < discretizedSpace.PathEdges.Count)
-                DEBUG_edgesAtStart = discretizedSpace.PathEdges[nearestStartNodeIndex];
-            if (nearestGoalNodeIndex >= 0 && nearestGoalNodeIndex < discretizedSpace.PathEdges.Count)
-                DEBUG_edgesAtGoal = discretizedSpace.PathEdges[nearestGoalNodeIndex];
+            var pNodeCount = discretizedSpace.GetNodeCount();
+
+            if (nearestStartNodeIndex >= 0 && nearestStartNodeIndex < pNodeCount)
+                DEBUG_edgesAtStart = discretizedSpace.GetAdjacencies(nearestStartNodeIndex);
+            if (nearestGoalNodeIndex >= 0 && nearestGoalNodeIndex < pNodeCount)
+                DEBUG_edgesAtGoal = discretizedSpace.GetAdjacencies(nearestGoalNodeIndex);
 
             if (initSearch)
             {
@@ -307,14 +319,14 @@ public class MoveBall : MonoBehaviour, IBallMover
 
                 //CreateMarkerLines(discretizedSpace.PathNodes[nearestStartNodeIndex], 0.2f, StartMarkerColor);
 
-                CreateEndMarker(discretizedSpace.PathNodes[nearestGoalNodeIndex], MarkerSize);
-                CreateStartMarker(discretizedSpace.PathNodes[nearestStartNodeIndex], MarkerSize);
+                CreateEndMarker(discretizedSpace.GetNode(nearestGoalNodeIndex), MarkerSize);
+                CreateStartMarker(discretizedSpace.GetNode(nearestStartNodeIndex), MarkerSize);
 
                 //Debug.Log("goal marker should be at: " + discretizedSpace.PathNodes[nearestGoalNodeIndex]);
 
 
-                if(!HideSearchViz)
-                    CreateSetMarkers(discretizedSpace.PathNodes, searchNodeRecords, currentNode, openNodes, closedNodes, prevOpenNodes, prevClosedNodes);
+                if (!HideSearchViz)
+                    CreateSetMarkers(discretizedSpace.GetNodeCount, discretizedSpace.GetNode, searchNodeRecords, currentNode, openNodes, closedNodes, prevOpenNodes, prevClosedNodes);
 
 
                 // Track previous nodes for an incremental search. Allows for efficient incremental draw
@@ -323,13 +335,13 @@ public class MoveBall : MonoBehaviour, IBallMover
 
                 foreach (var n in openNodes)
                 {
-                    if(n != nearestGoalNodeIndex) //always want to redraw the goal for orientation
+                    if (n != nearestGoalNodeIndex) //always want to redraw the goal for orientation
                         prevOpenNodes.Add(n);
                 }
 
                 foreach (var n in closedNodes)
                 {
-                    if(n != nearestGoalNodeIndex) //always want to redraw the goal for orientation
+                    if (n != nearestGoalNodeIndex) //always want to redraw the goal for orientation
                         prevClosedNodes.Add(n);
                 }
 
@@ -403,7 +415,7 @@ public class MoveBall : MonoBehaviour, IBallMover
             var expectedArrivalTime = currDist / Speed;
             var distTraveled = elapsedTime * Speed;
 
-            if( elapsedTime >= expectedArrivalTime)
+            if (elapsedTime >= expectedArrivalTime)
             {
                 ++currPathIndex;
                 var pos = new Vector3(currPathSegment.Item2.x, 0f, currPathSegment.Item2.y);
@@ -425,7 +437,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
 
         //clear the current search
-        if(Input.GetKeyUp(KeyCode.C))
+        if (Input.GetKeyUp(KeyCode.C))
         {
             activeSearch = false;
             rawPath = null;
@@ -437,7 +449,7 @@ public class MoveBall : MonoBehaviour, IBallMover
         }
 
         //toggle hidden search metadata
-        if(Input.GetKeyUp(KeyCode.H))
+        if (Input.GetKeyUp(KeyCode.H))
         {
 
             HideSearchViz = !HideSearchViz;
@@ -445,6 +457,11 @@ public class MoveBall : MonoBehaviour, IBallMover
 
     }
 
+
+    protected Vector2Int Convert1DTo2D(int i, int width)
+    {
+        return new Vector2Int(i % width, i / width);
+    }
 
     int NearestValidNodeIndex(Vector2 v)
     {
@@ -455,7 +472,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         var min = discretizedSpace.Boundary.min;
         var max = discretizedSpace.Boundary.max;
-       
+
         //var origin = discretizedSpace.BottomLeftCornerWCS;
 
         // Needs to be counterclockwise!
@@ -467,9 +484,14 @@ public class MoveBall : MonoBehaviour, IBallMover
                    new Vector2(min.x, max.z)
              };
 
-        for (int i = 0; i < discretizedSpace.PathNodes.Count; ++i)
+
+        var gameGrid = discretizedSpace as GameGrid;
+
+        var pNodeCount = discretizedSpace.GetNodeCount();
+
+        for (int i = 0; i < pNodeCount; ++i)
         {
-            var n = discretizedSpace.PathNodes[i];
+            var n = discretizedSpace.GetNode(i);
 
             var nint = CG.Convert(n);
 
@@ -489,26 +511,41 @@ public class MoveBall : MonoBehaviour, IBallMover
                     continue;
                 }
 
-
-                foreach (var o in discretizedSpace.Obstacles.getObstacles())
+                if (gameGrid != null)
                 {
-                    if(o.IsPointInPolygon(n))
+                    var width = gameGrid.Grid.GetLength(0);
+
+                    var gridCoords = Convert1DTo2D(i, width);
+
+                    if (!gameGrid.Grid[gridCoords.x, gridCoords.y])
                     {
-                        //Debug.Log("Point in polygon");
                         goodPoint = false;
-                        break;
-                    }
-                    //else if(Utils.Intersects(v,n, o.GetPolygon()))
-                    else if(CG.IntersectionLineSegmentWithPolygon(vint, nint, o.GetIntegerPoints()))
-                    {
-                        //Debug.Log("No line of sight");
-                        goodPoint = false;
-                        break;
+                        continue;
                     }
                 }
+                else
+                {
 
-                if (!goodPoint)
-                    continue;
+                    foreach (var o in discretizedSpace.Obstacles.getObstacles())
+                    {
+                        if (o.IsPointInPolygon(n))
+                        {
+                            //Debug.Log("Point in polygon");
+                            goodPoint = false;
+                            break;
+                        }
+                        //else if(Utils.Intersects(v,n, o.GetPolygon()))
+                        else if (CG.IntersectionLineSegmentWithPolygon(vint, nint, o.GetIntegerPoints()))
+                        {
+                            //Debug.Log("No line of sight");
+                            goodPoint = false;
+                            break;
+                        }
+                    }
+
+                    if (!goodPoint)
+                        continue;
+                }
 
                 minDist = dist;
                 minNodeIndex = i;
@@ -538,7 +575,7 @@ public class MoveBall : MonoBehaviour, IBallMover
         var d = CG.DistanceToLineSegment(testPos, lineposA, lineposB);
 
         return (d <= ballRadius);
-        
+
     }
 
     public void OnClicked(RaycastHit hit, bool isLeft)
@@ -586,7 +623,7 @@ public class MoveBall : MonoBehaviour, IBallMover
             //but if that changes...
 
             var pts = o.GetPoints();
-            for(int i = 0, j = pts.Length-1; i<pts.Length; j = i++ )
+            for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
             {
                 var pt0 = pts[i];
                 var pt1 = pts[j];
@@ -602,23 +639,23 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         this.nearestGoalNodeIndex = NearestValidNodeIndex(clickLoc);
 
-        if(this.nearestGoalNodeIndex < 0)
+        if (this.nearestGoalNodeIndex < 0)
         {
             Debug.Log("Not a valid click location");
             return;
         }
 
-        var nearestGoalNode = discretizedSpace.PathNodes[this.nearestGoalNodeIndex];
+        var nearestGoalNode = discretizedSpace.GetNode(this.nearestGoalNodeIndex);
 
         this.nearestStartNodeIndex = NearestValidNodeIndex(CurrentPosition);
 
-        if(this.nearestStartNodeIndex < 0)
+        if (this.nearestStartNodeIndex < 0)
         {
             Debug.Log("Could not assign start location");
             return;
         }
 
-        var nearestStartNode = discretizedSpace.PathNodes[this.nearestStartNodeIndex];
+        var nearestStartNode = discretizedSpace.GetNode(this.nearestStartNodeIndex);
 
         //startPos = CurrentPosition;
         this.goalPos = clickLoc;
@@ -638,8 +675,8 @@ public class MoveBall : MonoBehaviour, IBallMover
         prevAlg = Manager.Instance.PathSearchAlgorithm;
 
 
-        CreateEndMarker(discretizedSpace.PathNodes[nearestGoalNodeIndex], MarkerSize);
-        CreateStartMarker(discretizedSpace.PathNodes[nearestStartNodeIndex], MarkerSize);
+        CreateEndMarker(discretizedSpace.GetNode(nearestGoalNodeIndex), MarkerSize);
+        CreateStartMarker(discretizedSpace.GetNode(nearestStartNodeIndex), MarkerSize);
         CreateCurrentOverlayMarker(nearestStartNode, MarkerSize, 0.08f);
 
         this.discretizedSpace.SearchOverlayCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -675,10 +712,10 @@ public class MoveBall : MonoBehaviour, IBallMover
         var resPath = new List<Vector2>(path.Count + 2);
 
         resPath.Add(startPos);
-        
+
         for (int i = 0; i < path.Count; ++i)
         {
-            resPath.Add(discretizedSpace.PathNodes[path[i]]);
+            resPath.Add(discretizedSpace.GetNode(path[i]));
         }
 
         if (pathRes == PathSearchResultType.Complete)
@@ -712,17 +749,17 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         var rawPath = new List<System.Tuple<Vector2, Vector2>>(path.Count + 2);
 
-        rawPath.Add(new System.Tuple<Vector2, Vector2>(startPos, discretizedSpace.PathNodes[path[0]]));
+        rawPath.Add(new System.Tuple<Vector2, Vector2>(startPos, discretizedSpace.GetNode(path[0])));
 
-        for(int i = 0; i<path.Count -1; ++i)
+        for (int i = 0; i < path.Count - 1; ++i)
         {
-            rawPath.Add(new System.Tuple<Vector2, Vector2>(discretizedSpace.PathNodes[path[i]], discretizedSpace.PathNodes[path[i + 1]]));
+            rawPath.Add(new System.Tuple<Vector2, Vector2>(discretizedSpace.GetNode(path[i]), discretizedSpace.GetNode(path[i + 1])));
 
         }
 
-        if(pathRes == PathSearchResultType.Complete)
+        if (pathRes == PathSearchResultType.Complete)
         {
-            rawPath.Add(new System.Tuple<Vector2, Vector2>(discretizedSpace.PathNodes[path[path.Count-1]], goalPos));
+            rawPath.Add(new System.Tuple<Vector2, Vector2>(discretizedSpace.GetNode(path[path.Count - 1]), goalPos));
         }
 
         return rawPath;
@@ -758,7 +795,9 @@ public class MoveBall : MonoBehaviour, IBallMover
 
 
     void CreateSetMarkers(
-        List<Vector2> nodes,
+        //List<Vector2> nodes,
+        GetNodeCount getNodeCount,
+        GetNode getNode,
         Dictionary<int, PathSearchNodeRecord> searchNodeRecords,
         int currNode,
         Priority_Queue.SimplePriorityQueue<int, float> openNodes,
@@ -774,7 +813,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         foreach (var nindex in openNodes)
         {
-            var node = nodes[nindex];
+            var node = getNode(nindex);
 
             if (nindex == currNode)
             {
@@ -790,9 +829,12 @@ public class MoveBall : MonoBehaviour, IBallMover
 
             float angle = 0f;
             bool directed = false;
-            if (pindex >= 0 && pindex < nodes.Count)
+
+            var nodeCount = getNodeCount();
+
+            if (pindex >= 0 && pindex < nodeCount)
             {
-                var pnode = nodes[pindex];
+                var pnode = getNode(pindex);
                 Vector2 flip = new Vector2(1f, -1f);
                 angle = Vector2.SignedAngle(Vector2.right, flip * (pnode - node));
                 directed = true;
@@ -827,9 +869,9 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         }
 
-        foreach(var nindex in closedNodes)
+        foreach (var nindex in closedNodes)
         {
-            var node = nodes[nindex];
+            var node = getNode(nindex);
 
             if (nindex == currNode)
             {
@@ -845,11 +887,14 @@ public class MoveBall : MonoBehaviour, IBallMover
 
             float angle = 0f;
             bool directed = false;
-            if (pindex >= 0 && pindex < nodes.Count)
+
+            var nodeCount = getNodeCount();
+
+            if (pindex >= 0 && pindex < nodeCount)
             {
-                var pnode = nodes[pindex];
+                var pnode = getNode(pindex);
                 Vector2 flip = new Vector2(1f, -1f);
-                angle = Vector2.SignedAngle(Vector2.right, flip*(pnode - node));
+                angle = Vector2.SignedAngle(Vector2.right, flip * (pnode - node));
                 directed = true;
             }
 
@@ -893,19 +938,19 @@ public class MoveBall : MonoBehaviour, IBallMover
         if (path.Count < 1)
             return;
 
-        Utils.DrawLine(startPos, discretizedSpace.PathNodes[path[0]], offset, parent, PathColor, MarkerLineMaterial);
+        Utils.DrawLine(startPos, discretizedSpace.GetNode(path[0]), offset, parent, PathColor, MarkerLineMaterial);
 
-        for(int i=0; i<path.Count-1; ++i)
+        for (int i = 0; i < path.Count - 1; ++i)
         {
             var pn1 = path[i];
             var pn2 = path[i + 1];
 
-            Utils.DrawLine(discretizedSpace.PathNodes[pn1], discretizedSpace.PathNodes[pn2], offset, parent, PathColor, MarkerLineMaterial);
+            Utils.DrawLine(discretizedSpace.GetNode(pn1), discretizedSpace.GetNode(pn2), offset, parent, PathColor, MarkerLineMaterial);
         }
 
-        if(pathResult == PathSearchResultType.Complete)
+        if (pathResult == PathSearchResultType.Complete)
         {
-            Utils.DrawLine(discretizedSpace.PathNodes[path[path.Count-1]], goalPos, offset, parent, PathColor, MarkerLineMaterial);
+            Utils.DrawLine(discretizedSpace.GetNode(path[path.Count - 1]), goalPos, offset, parent, PathColor, MarkerLineMaterial);
         }
 
     }
@@ -967,7 +1012,7 @@ public class MoveBall : MonoBehaviour, IBallMover
         Utils.DrawLine(new Vector2(p1.x, p1.z), new Vector2(p2.x, p2.z),
             offset, parent, c, MarkerLineMaterial, lineWidth);
 
-        p1 = new Vector3(0f,0f, -halfWidth / 2f);
+        p1 = new Vector3(0f, 0f, -halfWidth / 2f);
         p2 = new Vector3(0f, 0f, halfWidth / 2f);
 
         p1 = pos3d + rot * p1;
@@ -977,7 +1022,7 @@ public class MoveBall : MonoBehaviour, IBallMover
             offset, parent, c, MarkerLineMaterial, lineWidth);
 
 
-        p1 = new Vector3(0f,0f, halfWidth / 2f);
+        p1 = new Vector3(0f, 0f, halfWidth / 2f);
         p2 = new Vector3(halfWidth, 0f, 0f);
 
         p1 = pos3d + rot * p1;
@@ -985,7 +1030,7 @@ public class MoveBall : MonoBehaviour, IBallMover
 
         Utils.DrawLine(new Vector2(p1.x, p1.z), new Vector2(p2.x, p2.z),
             offset, parent, c, MarkerLineMaterial, lineWidth);
-      
+
     }
 
 

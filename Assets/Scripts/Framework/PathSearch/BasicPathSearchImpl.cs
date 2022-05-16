@@ -8,7 +8,12 @@ public class BasicPathSearchImpl
     {
         return Vector2.Distance(a, b);
     }
-    public static PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges,
+    public static PathSearchResultType FindPathIncremental(
+       //List<Vector2> nodes,
+       //List<List<int>> edges,
+       GetNodeCount getNodeCount,
+       GetNode getNode,
+       GetNodeAdjacencies adjacencies,
        int startNodeIndex, int goalNodeIndex,
        bool IsBFS, //true for BFS, false for DFS,
        bool randomExpansion, // true if expanded edges added in random order
@@ -17,15 +22,20 @@ public class BasicPathSearchImpl
        ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords,
        ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
+        var nodeCount = getNodeCount();
         PathSearchResultType pathResult = PathSearchResultType.InProgress;
-        if (nodes == null || startNodeIndex >= nodes.Count || goalNodeIndex >= nodes.Count ||
-            edges == null || startNodeIndex >= edges.Count || goalNodeIndex >= edges.Count ||
-            edges.Count != nodes.Count ||
+        if (
+            //nodes == null ||
+            startNodeIndex >= nodeCount || goalNodeIndex >= nodeCount ||
+            //edges == null || startNodeIndex >= edges.Count || goalNodeIndex >= edges.Count ||
+            //edges.Count != nodes.Count ||
             startNodeIndex < 0 || goalNodeIndex < 0 ||
             maxNumNodesToExplore <= 0 ||
             (!doInitialization &&
              (openNodes == null || closedNodes == null || currentNodeIndex < 0 ||
-              currentNodeIndex >= nodes.Count || currentNodeIndex >= edges.Count)))
+              currentNodeIndex >= nodeCount
+              //|| currentNodeIndex >= edges.Count
+              )))
         {
             searchNodeRecords = new Dictionary<int, PathSearchNodeRecord>();
             openNodes = new SimplePriorityQueue<int, float>();
@@ -86,7 +96,8 @@ public class BasicPathSearchImpl
 
             PathSearchNodeRecord edgeNodeRecord = null;
 
-            var currEdges = edges[currentNodeIndex];
+            //var currEdges = edges[currentNodeIndex];
+            var currEdges = adjacencies(currentNodeIndex);
 
             // Just for fun. If random expansion is enabled, DFS can generate funny paths
             if (randomExpansion)
@@ -107,7 +118,7 @@ public class BasicPathSearchImpl
             foreach (var edgeNodeIndex in currEdges)
             {
                 var costToEdgeNode = currentNodeRecord.CostSoFar +
-                    G(nodes[currentNodeIndex], nodes[edgeNodeIndex]);
+                    G(getNode(currentNodeIndex), getNode(edgeNodeIndex));
 
 
                 if (closedNodes.Contains(edgeNodeIndex))
@@ -179,7 +190,7 @@ public class BasicPathSearchImpl
                 // (But we would need to deduce whether said code was running in Dijkstra
                 // mode with a zero constant Heuristic() func)
                 // Otherwise, we must calculate the distance
-                var d = Vector2.Distance(nodes[nrec.NodeIndex], nodes[goalNodeIndex]);
+                var d = Vector2.Distance(getNode(nrec.NodeIndex), getNode(goalNodeIndex));
                 if (d < closestDist)
                 {
                     closest = n;

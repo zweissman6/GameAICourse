@@ -5,9 +5,13 @@ using Priority_Queue;
 public interface IPathSearchProvider
 {
 
-
-
-    PathSearchResultType FindPath(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
+    PathSearchResultType FindPath(
+                                    //List<Vector2> nodes,
+                                    //List<List<int>> edges,
+                                    GetNodeCount getNodeCount,
+                                    GetNode getNode,
+                                    GetNodeAdjacencies adjacencies,
+                                    bool useManhattan,
                                     int startNodeIndex,
                                     int goalNodeIndex,                              
                                     ref int currentNode,
@@ -18,7 +22,13 @@ public interface IPathSearchProvider
                                     );
 
 
-    PathSearchResultType FindPathIncremental(List<Vector2> nodes, List<List<int>> edges, bool useManhattan,
+    PathSearchResultType FindPathIncremental(
+                                        //List<Vector2> nodes,
+                                        //List<List<int>> edges,
+                                        GetNodeCount getNodeCount,
+                                        GetNode getNode,
+                                        GetNodeAdjacencies adjacencies,
+                                        bool useManhattan,
                                         int startNodeIndex, int goalNodeIndex, 
                                         int maxNumNodesToExplore, bool doInitialization,
                                         ref int currentNode,

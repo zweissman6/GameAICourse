@@ -164,19 +164,26 @@ public class CG
     // ---------------------------------------------------------------------
     // Returns TRUE iff segments ab & cd intersect, properly or improperly.
     //
+    // TODO: Why not use the IntersectProp() impl and just discard the Collinear()
+    // tests? Seems that would get same result and be more efficient.
     static public bool Intersect(Vector2Int a, Vector2Int b, Vector2Int c, Vector2Int d)
     {
-        if (IntersectProp(a, b, c, d))
-            return true;
 
-        else if (Between(a, b, c)
-             || Between(a, b, d)
-             || Between(c, d, a)
-             || Between(c, d, b))
-            return true;
 
-        else
-            return false;
+        return Xor(Left(a, b, c), Left(a, b, d)) && Xor(Left(c, d, a), Left(c, d, b));
+        
+
+        //if (IntersectProp(a, b, c, d))
+        //    return true;
+
+        //else if (Between(a, b, c)
+        //     || Between(a, b, d)
+        //     || Between(c, d, a)
+        //     || Between(c, d, b))
+        //    return true;
+
+        //else
+        //    return false;
     }
 
 

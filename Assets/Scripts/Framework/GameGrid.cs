@@ -2,6 +2,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,8 +49,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         //Bake();
 
-        if(UseHardCodedCases)
-             Utils.DisplayName("CreateGrid", "HARD CODED CASES");
+        if (UseHardCodedCases)
+            Utils.DisplayName("CreateGrid", "HARD CODED CASES");
         else
             Utils.DisplayName("CreateGrid", CreateGrid.StudentAuthorName);
 
@@ -73,7 +74,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         var polys = new List<Polygon>(obst.Count);
 
-        for(int i=0; i < obst.Count; ++i)
+        for (int i = 0; i < obst.Count; ++i)
         {
             polys.Add(obst[i].GetPolygon());
         }
@@ -106,8 +107,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
             CreateGrid.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize,
                                 polys, out grid);
 
-            CreateGrid.CreatePathGraphFromGrid(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, gridConnectivity,
-                            grid, out pathNodes, out pathEdges);
+
         }
 
 
@@ -126,8 +126,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
 
         Grid = grid;
-        PathNodes = pathNodes;
-        PathEdges = pathEdges;
+        //PathNodes = pathNodes;
+        //PathEdges = pathEdges;
 
         PurgeOutdatedLineViz();
 
@@ -153,6 +153,70 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
         DisableLineViz();
 
     }
+
+
+    protected int Convert2DTo1D(int x, int y, int width)
+    {
+        return x + y * width;
+    }
+
+    protected Vector2Int Convert1DTo2D(int i, int width)
+    {
+        return new Vector2Int(i % width, i / width);
+    }
+
+    protected int NeighborIndex(int nodex, int nodey, int width, TraverseDirection dir)
+    {
+        int xoffs = 0;
+        int yoffs = 0;
+
+        if (dir == TraverseDirection.Up || dir == TraverseDirection.UpLeft || dir == TraverseDirection.UpRight)
+            yoffs = 1;
+        else if (dir == TraverseDirection.Down || dir == TraverseDirection.DownLeft || dir == TraverseDirection.DownRight)
+            yoffs = -1;
+
+        if (dir == TraverseDirection.Left || dir == TraverseDirection.UpLeft || dir == TraverseDirection.DownLeft)
+            xoffs = -1;
+        else if (dir == TraverseDirection.Right || dir == TraverseDirection.UpRight || dir == TraverseDirection.DownRight)
+            xoffs = 1;
+
+        return Convert2DTo1D(nodex + xoffs, nodey + yoffs, width);
+
+    }
+
+    override public List<int> GetAdjacencies(int nodeIndex)
+    {
+        List<int> res = new List<int>();
+        var grid = Grid;
+
+        var gridConn = GridConn;
+
+        var width = grid.GetLength(0);
+        var height = grid.GetLength(1);
+
+        var v2 = Convert1DTo2D(nodeIndex, width);
+        int nodeX = v2.x;
+        int nodeY = v2.y;
+
+        if (!grid[nodeX, nodeY])
+            return res;
+
+        foreach (var dir in (TraverseDirection[])Enum.GetValues(typeof(TraverseDirection)))
+        {
+            if (gridConn == GridConnectivity.FourWay &&
+                (dir == TraverseDirection.UpLeft || dir == TraverseDirection.UpRight ||
+                dir == TraverseDirection.DownLeft || dir == TraverseDirection.DownRight))
+                continue;
+
+            if (CreateGrid.IsTraversable(grid, nodeX, nodeY, dir))
+            {
+                res.Add(NeighborIndex(nodeX, nodeY, width, dir));
+            }
+        }
+
+        return res;
+    }
+
 
     void DisableLineViz()
     {
@@ -233,14 +297,33 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
 
 
+    override public int GetNodeCount()
+    {
+        if (Grid == null)
+            return 0;
+
+        return Grid.GetLength(0) * Grid.GetLength(1);
+    }
+
+    override public Vector2 GetNode(int nodeIndex)
+    {
+        if (Grid == null)
+            return Vector2.zero;
+
+        var v = Convert1DTo2D(nodeIndex, Grid.GetLength(0));
+
+        return FindCenterOfGridCell(v.x, v.y);
+    }
+
+
 
     //
     // Returns cell location corresponding to a particular point
     //
-    public Vector2 FindGridCellForPoint(Vector2 point)
+    public Vector2Int FindGridCellForPoint(Vector2 point)
     {
         Vector2 diff = point - BottomLeftCornerWCS;
-        return new Vector2(diff.x / CellSize, diff.y / CellSize);
+        return new Vector2Int(Mathf.RoundToInt(diff.x / CellSize), Mathf.RoundToInt(diff.y / CellSize));
     }
 
     /*

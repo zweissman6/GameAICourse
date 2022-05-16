@@ -86,7 +86,11 @@ namespace Tests
 
                 ++attempts;
 
-                ret = AStarPathSearchImpl.FindPathIncremental(nodes, edges, G, H,
+                ret = AStarPathSearchImpl.FindPathIncremental(
+                    () => { return nodes.Count; },
+                    (nindex) => { return nodes[nindex]; },
+                    (nindex) => { return edges[nindex]; },
+                    G, H,
                     startNode, goalNode, maxNumNodesToExplore, init,
                     ref currentNodeIndex, ref searchNodeRecord, ref openNodes, ref closedNodes,
                     ref returnPath);
