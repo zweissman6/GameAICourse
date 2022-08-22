@@ -1,4 +1,8 @@
-﻿using System.Collections;
+﻿// compile_check
+// Remove the line above if you are subitting to GradeScope for a grade. But leave it if you only want to check
+// that your code compiles and the autograder can access your public methods.
+
+using System.Collections;
 using System.Collections.Generic;
 using Priority_Queue;
 using UnityEngine;
