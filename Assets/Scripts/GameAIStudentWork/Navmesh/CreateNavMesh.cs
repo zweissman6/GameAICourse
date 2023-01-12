@@ -107,16 +107,12 @@ namespace GameAICourse
         //          These triangles are passed out for visualization.
         // navmeshPolygons: out param of the convex polygons of the navmesh (list). 
         //          These polys are passed out for visualization
+        // adjPolys: out param of type AdjacentPolygons. These are used by autograder
+        //          to assess your work
         // pathNodes: a list of graph nodes, centered on each navmeshPolygon
         // pathEdges: graph adjacency list for each graph node. cooresponding index of pathNodes to match
         //      node with its edge list. All nodes must have an edge list (no null list)
         //      entries in each edge list are indices into pathNodes
-
-        // NOTES:
-        // Normally we would want to return a graph of navmeshPolygons with additional
-        // data such as which edges are boundaries, which are are portals (and where they go to),
-        // etc. However, for the purposes of this assignment you only return the pathNetwork as
-        // well as the unconnected navmeshPolygons and the original triangles you formed.
         // 
 
         public static void Create(
@@ -125,6 +121,7 @@ namespace GameAICourse
             out List<Polygon> offsetObst,
             out List<Polygon> origTriangles,
             out List<Polygon> navmeshPolygons,
+            out AdjacentPolygons adjPolys,
             out List<Vector2> pathNodes,
             out List<List<int>> pathEdges
             )
@@ -141,7 +138,7 @@ namespace GameAICourse
             // edges. It is going to be used to determine which triangles can be merged
             // into larger convex polygons. Later, it will also be used for generating
             // the pathNetwork on top of the navmesh
-            AdjacentPolygons adjPolys = new AdjacentPolygons();
+            adjPolys = new AdjacentPolygons();
 
             // Holds the complex set of polys representing obstacle boundaries
             // Any time you need to test against obstacles, use offsetObstPolys
@@ -225,6 +222,7 @@ namespace GameAICourse
                         var V2 = obstacleVertices[j];
                         var V3 = obstacleVertices[k];
 
+
                         // TODO This inner loop involves tasks for you to implement
 
                         // TODO first lets check if the candidate triangle
@@ -255,6 +253,11 @@ namespace GameAICourse
                         // Use Between() to test each obstacle vertex against the candidate
                         // triangle edge. This test is important to get right because
                         // it will stop triangles from forming that block adjacencies from forming.
+                        // If there is a vertex Between(), then continue to the next.
+                        // (Note: that if a tri edge is true for IsLineSegmentInPolygons() that it
+                        // can still be valid. It's just impossible for the Between() test
+                        // to fail. So we skip that step for efficiency.)
+
 
                         // TODO If the tri candidate has gotten this far, now create
                         // a new Polygon from your tri points. Also, we need to make sure
@@ -299,7 +302,6 @@ namespace GameAICourse
 
             // Priming the navmeshPolygons for next steps, and also allow visualization
             navmeshPolygons = new List<Polygon>(origTriangles);
-
             // TODO If you completed all of the triangle generation above, 
             // you can just return from the Create() method here to test what you have
             // accomplished so far. The originalTriangles
@@ -366,18 +368,13 @@ namespace GameAICourse
             // CommonPolygons values.
             //
             // Issues you need to address are:
-            // 1.) Calculate centroids of each polygon to be your pathNodes
-            // 2.) Implement a method for mapping adjacent polygons to a pathNode index
-            //     so that you can populate pathEdges.
+            // 1.) Calculate centroids of each portal edge to be your pathNodes
+            // 2.) Implement a method for mapping Polygons each to a list of CommonPolygonEdges,
+            //      and mapping CommonPolygonEdges to path node indexes (ints)
             //
-            // For 1.), poly.GetCentroid() will calculate the Vector2 position for you
-            // 2.) is a bit more challenging. I recommend the use of a Dictionary
-            // with a Polygon as key and the value is an int (for the pathNode index).
-            // This dictionary can be populated with pathNode indices by iterating over
-            // navmeshPolygons (type:List<Polygon>). This loop is also a good time to populate
-            // pathNodes with the Vector2 centroids and prime the pathEdges with empty lists.
-            // If you have resolved dev issues 1.) and 2.), you can then work with adjPolys
-            // to create your edges!
+            // For 1.), You can add the end points of the edges together and divide by 2.
+            // 2.) is a bit more challenging. I recommend the use of Dictionaries for the mappings.
+            //  You may benefit from a two-pass approach, iterating over the adjPolys.
 
 
             // ***************************** FINAL **********************************************
@@ -390,94 +387,6 @@ namespace GameAICourse
         } // Create()
 
 
-
-        class AdjacentPolygons : Dictionary<CommonPolygonEdge, CommonPolygons>
-        {
-            public AdjacentPolygons() : base()
-            {
-
-            }
-
-            public AdjacentPolygons(AdjacentPolygons ap) : base(ap)
-            {
-
-            }
-
-            public void AddPolygon(Polygon p)
-            {
-                AddPolygon(p, null, null);
-            }
-
-            public void AddPolygon(Polygon p, Polygon replacePolyA, Polygon replacePolyB)
-            {
-                if (p == null)
-                    return;
-
-                var pts = p.getIntegerPoints();
-                var ptslen = pts.Length;
-
-                for (int i = 0, j = ptslen - 1; i < ptslen; j = i++)
-                {
-                    var cpe = new CommonPolygonEdge(pts[j], pts[i]);
-
-
-                    if (!this.ContainsKey(cpe))
-                    {
-                        this.Add(cpe, new CommonPolygons(cpe, p));
-                    }
-                    else
-                    {
-                        var currcp = this[cpe];
-
-                        int clearSpots = 0;
-
-                        if (replacePolyA != null)
-                        {
-                            if (currcp.AB == replacePolyA)
-                            {
-                                currcp.ClearABPolygon();
-                                ++clearSpots;
-                            }
-                            else if (currcp.BA == replacePolyA)
-                            {
-                                currcp.ClearBAPolygon();
-                                ++clearSpots;
-                            }
-
-                        }
-                        else
-                            ++clearSpots;
-
-                        if (replacePolyB != null)
-                        {
-                            if (currcp.AB == replacePolyB)
-                            {
-                                currcp.ClearABPolygon();
-                                ++clearSpots;
-                            }
-                            else if (currcp.BA == replacePolyB)
-                            {
-                                currcp.ClearBAPolygon();
-                                ++clearSpots;
-                            }
-
-                        }
-                        else
-                            ++clearSpots;
-
-                        if (clearSpots <= 0)
-                        {
-                            Debug.LogError($"Failed to add poly! replacePolyA null? {replacePolyA == null} replacePolyB null? {replacePolyB == null}");
-                        }
-                        else
-                        {
-                            currcp.Add(p);
-                        }
-                    }
-                }
-            }
-
-        } //class
 
 
 

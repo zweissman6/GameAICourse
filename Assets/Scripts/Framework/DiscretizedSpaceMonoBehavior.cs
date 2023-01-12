@@ -13,9 +13,9 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
 
     public Obstacles Obstacles { get => obstacles; protected set => obstacles = value; }
 
-    protected List<Vector2> PathNodes { get => pathNodes;  set => pathNodes = value; }
+    public List<Vector2> PathNodes { get => pathNodes;  set => pathNodes = value; }
 
-    protected List<List<int>> PathEdges { get => pathEdges;  set => pathEdges = value; }
+    public List<List<int>> PathEdges { get => pathEdges;  protected set => pathEdges = value; }
 
     public List<GameObject> PathNodeMarkers { get => pathNodeMarkers; protected set => pathNodeMarkers = value; }
 

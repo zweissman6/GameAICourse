@@ -25,7 +25,7 @@ public class GreedySimplePathSearch : PathSearchProvider
         GetNodeCount getNodeCount,
         GetNode getNode,
         GetNodeAdjacencies adjacencies,
-        bool useManhattan,
+        PathSearchVariantType variant,
         int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
 

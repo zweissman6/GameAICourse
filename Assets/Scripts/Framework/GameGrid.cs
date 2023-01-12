@@ -26,6 +26,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     public bool[,] Grid { get; protected set; }
 
+    List<List<int>> hardCodedAdjacencies = null;
+
     public Color LineColor = Color.green;
     public Color BlockedLineColor = Color.blue;
 
@@ -49,8 +51,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         //Bake();
 
-        if (UseHardCodedCases)
-            Utils.DisplayName("CreateGrid", "HARD CODED CASES");
+        if(UseHardCodedCases)
+             Utils.DisplayName("CreateGrid", "HARD CODED CASES");
         else
             Utils.DisplayName("CreateGrid", CreateGrid.StudentAuthorName);
 
@@ -62,19 +64,21 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     public bool UseHardCodedCases = false;
 
+    bool hardCodedCaseFound = false;
+
     override public void Bake()
     {
         base.Bake();
 
         bool[,] grid;
-        List<Vector2> pathNodes;
-        List<List<int>> pathEdges;
+        //List<Vector2> pathNodes = new List<Vector2>();
+        //List<List<int>> pathEdges = new List<List<int>>();
 
         var obst = Obstacles.getObstacles();
 
         var polys = new List<Polygon>(obst.Count);
 
-        for (int i = 0; i < obst.Count; ++i)
+        for(int i=0; i < obst.Count; ++i)
         {
             polys.Add(obst[i].GetPolygon());
         }
@@ -83,6 +87,8 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         if (UseHardCodedCases)
         {
+            hardCodedCaseFound = false;
+
             var gct = new GridCase(0, BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, polys, gridConnectivity);
 
             overrideCase = HardCodedGridCases.FindCase(gct);
@@ -90,12 +96,25 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         if (overrideCase != null)
         {
+            hardCodedCaseFound = true;
+
+            Debug.Log($"Grid hard-coded case {overrideCase.caseCount} is being used");
             grid = overrideCase.grid;
-            pathNodes = overrideCase.pathNodes;
-            pathEdges = overrideCase.pathEdges;
+            hardCodedAdjacencies = overrideCase.adjacencies;
+
+            if (hardCodedAdjacencies == null || hardCodedAdjacencies.Count == 0)
+                Debug.Log("Hard-coded adjacencies null or empty");
+
+            //pathNodes = overrideCase.pathNodes;
+            //pathEdges = overrideCase.pathEdges;
         }
         else
         {
+
+            if(UseHardCodedCases)
+            {
+                Debug.Log("WARNING! Couldn't find a hard-coded case. Falling back to generation.");
+            }
 
             //pathNodes = new List<Vector2>();
             //pathEdges = new List<List<int>>();
@@ -110,11 +129,16 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
         }
 
+        Grid = grid;
+        //PathNodes = pathNodes;
+        //PathEdges = pathEdges;
 
 
 #if SAVE_CASES
 
-        GridCase gc = new GridCase(caseCount++, BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, polys, GridConn, grid, pathNodes, pathEdges);
+        var adjs = SaveAllAdjacencies();
+
+        GridCase gc = new GridCase(caseCount++, BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z, CellSize, polys, GridConn, grid, adjs); // pathNodes, pathEdges);
 
         using (var OutFile = new StreamWriter("cases.txt", true))
         {
@@ -125,9 +149,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 #endif
 
 
-        Grid = grid;
-        //PathNodes = pathNodes;
-        //PathEdges = pathEdges;
+
 
         PurgeOutdatedLineViz();
 
@@ -154,6 +176,33 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     }
 
+
+    protected List<List<int>> SaveAllAdjacencies()
+    {
+        var grid = Grid;
+
+        List<List<int>> ret = new List<List<int>>();
+
+        var lsize = grid.GetLength(0) * grid.GetLength(1);
+
+        for(int i = 0; i < lsize; ++i)
+        {
+            ret.Add(new List<int>());
+        }
+
+        for (int i = 0; i < grid.GetLength(0); ++i)
+        {
+            for(int j = 0; j < grid.GetLength(1); ++j)
+            {
+
+                var cellIndex = Convert2DTo1D(i, j, grid.GetLength(0));
+
+                ret[cellIndex] = GetAdjacencies(cellIndex);
+            }
+        }
+
+        return ret;
+    }
 
     protected int Convert2DTo1D(int x, int y, int width)
     {
@@ -186,6 +235,19 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
 
     override public List<int> GetAdjacencies(int nodeIndex)
     {
+        if (UseHardCodedCases && hardCodedCaseFound)
+        {
+            if (hardCodedAdjacencies != null)
+            {
+                return hardCodedAdjacencies[nodeIndex];
+            }
+            else
+            {
+                return new List<int>();
+            }
+        }
+
+
         List<int> res = new List<int>();
         var grid = Grid;
 
@@ -201,17 +263,20 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
         if (!grid[nodeX, nodeY])
             return res;
 
-        foreach (var dir in (TraverseDirection[])Enum.GetValues(typeof(TraverseDirection)))
+        foreach (var dir in (TraverseDirection[]) Enum.GetValues(typeof(TraverseDirection)))
         {
             if (gridConn == GridConnectivity.FourWay &&
                 (dir == TraverseDirection.UpLeft || dir == TraverseDirection.UpRight ||
                 dir == TraverseDirection.DownLeft || dir == TraverseDirection.DownRight))
                 continue;
 
+
+
             if (CreateGrid.IsTraversable(grid, nodeX, nodeY, dir))
             {
                 res.Add(NeighborIndex(nodeX, nodeY, width, dir));
             }
+            
         }
 
         return res;
@@ -323,7 +388,7 @@ public class GameGrid : DiscretizedSpaceMonoBehavior
     public Vector2Int FindGridCellForPoint(Vector2 point)
     {
         Vector2 diff = point - BottomLeftCornerWCS;
-        return new Vector2Int(Mathf.RoundToInt(diff.x / CellSize), Mathf.RoundToInt(diff.y / CellSize));
+        return new Vector2Int(Mathf.FloorToInt(diff.x / CellSize), Mathf.FloorToInt(diff.y / CellSize));
     }
 
     /*

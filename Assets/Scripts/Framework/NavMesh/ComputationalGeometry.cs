@@ -169,9 +169,7 @@ public class CG
     static public bool Intersect(Vector2Int a, Vector2Int b, Vector2Int c, Vector2Int d)
     {
 
-
         //return Xor(Left(a, b, c), Left(a, b, d)) && Xor(Left(c, d, a), Left(c, d, b));
-
 
         if (IntersectProp(a, b, c, d))
             return true;

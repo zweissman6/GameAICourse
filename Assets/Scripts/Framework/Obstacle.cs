@@ -51,7 +51,7 @@ public class Obstacle : MonoBehaviour, IDragFinishedObserver
             if(!CG.Ccw(polygon.getIntegerPoints()))
             {
 
-                Debug.LogError("Polygon found with NOT CCW. FIxing!");
+                Debug.LogError("Polygon found with NOT CCW. Fixing!");
                 polygon.Reverse();
             }
         }

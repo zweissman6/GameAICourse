@@ -30,6 +30,7 @@ public class PresetConfig : MonoBehaviour
 
     private GameObject PathNodeMarkersGroup;
     public GameObject WaypointPrefab;
+    public GameObject CustomPrefab;
 
     private string PathNodeMarkersGroupName = "PathNodeMarkersGroup";
 
@@ -167,12 +168,27 @@ public class PresetConfig : MonoBehaviour
             if (Input.GetKeyUp(KeyCode.Period))
             {
                 grid.gridConnectivity = grid.gridConnectivity == GridConnectivity.EightWay ?
-                    grid.gridConnectivity = GridConnectivity.FourWay : grid.gridConnectivity = GridConnectivity.EightWay;
+                    GridConnectivity.FourWay : GridConnectivity.EightWay;
                 Debug.Log($"GridConnectivity is now set to: {grid.gridConnectivity}");
                 LoadConfig(currConfig);
             }
 
 
+        }
+
+        var pathNetwork = DiscretizedSpace as PathNetwork;
+
+        if(pathNetwork != null)
+        {
+
+            if (Input.GetKeyUp(KeyCode.Period))
+            {
+                pathNetwork.pathNetworkMode = pathNetwork.pathNetworkMode == PathNetworkMode.Predifined ?
+                    PathNetworkMode.PointsOfVisibility : PathNetworkMode.Predifined;
+
+                Debug.Log($"Path Network mode is now set to: {pathNetwork.pathNetworkMode}");
+                LoadConfig(currConfig);
+            }
         }
 
 
@@ -329,7 +345,7 @@ public class PresetConfig : MonoBehaviour
     }
 
 
-    protected void PlacePathNodes(int totalNodes, float agentScale, int seed)
+    protected void OLD_PlacePathNodes(int totalNodes, float agentScale, int seed)
     {
 
         //var seed = Random.Range(0, int.MaxValue);
@@ -438,10 +454,97 @@ public class PresetConfig : MonoBehaviour
     }
 
 
+    protected List<Vector2> PlacePathNodes(int totalNodes, float agentScale, int seed)
+    {
+        var pathNodes = new List<Vector2>();
+
+        //var seed = Random.Range(0, int.MaxValue);
+        UnityEngine.Random.InitState(seed);
+
+        //Debug.Log("SEED IS: " + seed);
+
+        var origin = DiscretizedSpace.BottomLeftCornerWCS;
+        var width = DiscretizedSpace.Boundary.size.x;
+        var height = DiscretizedSpace.Boundary.size.z;
+
+        bool isValid;
+
+
+        Vector2 posv = Vector2.zero;
+
+
+        // Try to place some corner points
+
+        var radMult = 2f;
+
+        //Debug.Log("AGENT RADIUS: " + Agent.Radius);
+
+
+        var cornerOffset = Agent.Radius * radMult * Vector2.one;
+        posv = origin + cornerOffset;
+        if (NewPathNodeIsValid(posv))
+            pathNodes.Add(posv);
+
+        posv = origin + new Vector2(width, height) - cornerOffset;
+        if (NewPathNodeIsValid(posv))
+            pathNodes.Add(posv);
+
+        cornerOffset *= new Vector2(1f, -1f);
+        posv = origin + new Vector2(width, 0f) - cornerOffset;
+        if (NewPathNodeIsValid(posv))
+            pathNodes.Add(posv);
+
+
+        posv = origin + new Vector2(0f, height) + cornerOffset;
+        if (NewPathNodeIsValid(posv))
+            pathNodes.Add(posv);
+
+
+        for (int i = 0; i < totalNodes; ++i)
+        {
+
+
+            int count = 0;
+            const int MaxCount = 100;
+
+            do
+            {
+                ++count;
+
+                if (count > MaxCount)
+                {
+                    isValid = false;
+
+                    Debug.Log("Couldn't find a valid position!");
+                    break;
+
+                }
+
+                var x = origin.x + UnityEngine.Random.Range(0f, width);
+                var y = origin.y + UnityEngine.Random.Range(0f, height);
+
+                posv = new Vector2(x, y);
+
+                isValid = NewPathNodeIsValid(posv);
+
+            } while (!isValid);
+
+            if (isValid)
+                pathNodes.Add(posv);
+        }
+
+
+        return pathNodes;
+
+    }
+
+
+
     public enum ObstacleType
     {
         Cube,
-        SoftStar
+        SoftStar,
+        Custom
     }
 
 
@@ -451,15 +554,21 @@ public class PresetConfig : MonoBehaviour
         public Vector2 pos;
         public Vector2 scale;
         public float rot;
+        public Vector2[] customObstVerts;
 
-        public ObstacleConfig(ObstacleType otype, Vector2 pos, Vector2 scale, float rot)
+        public ObstacleConfig(ObstacleType otype, Vector2 pos, Vector2 scale, float rot, Vector2[] customObstVerts)
         {
             this.otype = otype;
             this.pos = pos;
             this.scale = scale;
             this.rot = rot;
+            this.customObstVerts = customObstVerts;
         }
 
+        public ObstacleConfig(ObstacleType otype, Vector2 pos, Vector2 scale, float rot) :
+            this(otype, pos, scale, rot, null)
+        {
+        }
     }
 
 
@@ -499,6 +608,8 @@ public class PresetConfig : MonoBehaviour
                 return CubeObstaclePrefab;
             case ObstacleType.SoftStar:
                 return SoftStarObstaclePrefab;
+            case ObstacleType.Custom:
+                return CustomPrefab;
             default:
                 return CubeObstaclePrefab;
 
@@ -524,6 +635,12 @@ public class PresetConfig : MonoBehaviour
             var prefab = SelectPrefab(oc.otype);
             o = Instantiate(prefab, new Vector3(oc.pos.x, YPOS, oc.pos.y), Quaternion.Euler(XROT, oc.rot, ZROT), ObstaclesGroup.transform);
             o.transform.localScale = new Vector3(oc.scale.x, YSCALE, oc.scale.y);
+            if (oc.otype == ObstacleType.Custom)
+            {
+                var obst = o.GetComponent<Obstacle>();
+                obst.SetPoints(oc.customObstVerts);
+            }
+
         }    
 
         // set ground plane size
@@ -576,20 +693,25 @@ public class PresetConfig : MonoBehaviour
 
 
 
-        PathNodeMarkersGroup = Utils.FindOrCreateGameObjectByName(PathNodeMarkersGroupName);
+        //PathNodeMarkersGroup = Utils.FindOrCreateGameObjectByName(PathNodeMarkersGroupName);
 
 
         var pn = DiscretizedSpace as PathNetwork;
         if (pn != null) {
 
-            foreach( var pnode in pathNodes)
-            {
-                var onode = Instantiate(WaypointPrefab, new Vector3(pnode.x, 0f, pnode.y), Quaternion.identity, PathNodeMarkersGroup.transform);
-                onode.transform.localScale = Vector3.one * agentScale;
-            }
+            //foreach( var pnode in pathNodes)
+            //{
+            //    var onode = Instantiate(WaypointPrefab, new Vector3(pnode.x, 0f, pnode.y), Quaternion.identity, PathNodeMarkersGroup.transform);
+            //    onode.transform.localScale = Vector3.one * agentScale;
+            //}
+
+            var extraPathNodes = new List<Vector2>();
 
             if(numPathNodes > 0)
-                PlacePathNodes(numPathNodes, agentScale, seed);
+                extraPathNodes = PlacePathNodes(numPathNodes, agentScale, seed);
+
+            pn.PathNodes = new List<Vector2>(pathNodes);
+            pn.PathNodes.AddRange(extraPathNodes);
         }
 
         DiscretizedSpace.Bake();

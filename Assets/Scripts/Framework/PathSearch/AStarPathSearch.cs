@@ -32,13 +32,13 @@ public class AStarPathSearch : PathSearchProvider
         GetNodeCount getNodeCount,
         GetNode getNode,
         GetNodeAdjacencies adjacencies,
-        bool useManhattan,
+        PathSearchVariantType variant,
         int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
 
         CostCallback h;
 
-        if (useManhattan)
+        if (variant.HasFlag(PathSearchVariantType.ManhattanDistance))
             h = AStarPathSearchImpl.HeuristicManhattan;
         else
             h = AStarPathSearchImpl.HeuristicEuclidean;

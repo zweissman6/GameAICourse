@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 170076734}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.49641287, b: 0.5748173, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657874, g: 0.49641275, b: 0.5748172, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1030,6 +1030,8 @@ MonoBehaviour:
   pathOverlay: {fileID: 1247732796}
   searchOverlay: {fileID: 239554882}
   WaypointPrefab: {fileID: 5261155335093340696, guid: ec41c7b2071f44e3994182c227e87b73,
+    type: 3}
+  CustomPrefab: {fileID: 3291999683851561014, guid: 223898e274887478b933b1b457fb664e,
     type: 3}
 --- !u!1001 &1767821462
 PrefabInstance:

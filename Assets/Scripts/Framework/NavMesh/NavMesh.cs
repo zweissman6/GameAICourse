@@ -68,16 +68,17 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
         List<List<int>> pedges;
 
         List<Polygon> offsetObst;
+        AdjacentPolygons adjPolys;
 
         //Debug.Log("NavMesh: calling student code!");
 
         CreateNavMesh.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
             Obstacles.GetObstaclePolygons(), moveBall.Radius,
             out offsetObst,
-            out VisualizeOriginalTriangles,           
+            out VisualizeOriginalTriangles,
             out VisualizeNavMeshPolygons,
+            out adjPolys,
             out pnodes, out pedges
-            
             );
 
         PathNodes = pnodes;

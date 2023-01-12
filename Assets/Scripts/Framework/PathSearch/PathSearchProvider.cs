@@ -10,7 +10,7 @@ public class PathSearchProvider : IPathSearchProvider
         GetNodeCount getNodeCount,
         GetNode getNode,
         GetNodeAdjacencies adjacencies,
-        bool useManhattan, int startNodeIndex, int goalNodeIndex, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
+        PathSearchVariantType variant, int startNodeIndex, int goalNodeIndex, ref int currentNodeIndex, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
 
         return FindPathIncremental(
@@ -19,7 +19,7 @@ public class PathSearchProvider : IPathSearchProvider
             getNodeCount,
             getNode,
             adjacencies,
-            useManhattan, startNodeIndex, goalNodeIndex, int.MaxValue, true, ref currentNodeIndex, ref searchNodeRecords,
+            variant, startNodeIndex, goalNodeIndex, int.MaxValue, true, ref currentNodeIndex, ref searchNodeRecords,
             ref openNodes, ref closedNodes, ref returnPath);
     }
 
@@ -30,7 +30,7 @@ public class PathSearchProvider : IPathSearchProvider
         GetNodeCount getNodeCount,
         GetNode getNode,
         GetNodeAdjacencies adjacencies,
-        bool useManhattan, int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNode, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
+        PathSearchVariantType variant, int startNodeIndex, int goalNodeIndex, int maxNumNodesToExplore, bool doInitialization, ref int currentNode, ref Dictionary<int, PathSearchNodeRecord> searchNodeRecords, ref SimplePriorityQueue<int, float> openNodes, ref HashSet<int> closedNodes, ref List<int> returnPath)
     {
         throw new System.NotImplementedException();
     }

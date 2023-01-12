@@ -16,10 +16,14 @@ public class GridCase
     //public float agentRadius { get; private set; }
     public GridConnectivity gridConnectivity { get; private set; }
     public bool[,] grid { get; private set; }
-    public List<Vector2> pathNodes { get; private set; }
-    public Vector2[] pathNodePoints { get; private set; }
-    public List<List<int>> pathEdges { get; private set; }
-    public int[][] pathEdgePoints { get; private set; }
+
+    public List<List<int>> adjacencies { get; private set; }
+    public int[][] adjacenciesRaw { get; private set; }
+
+    //public List<Vector2> pathNodes { get; private set; }
+    //public Vector2[] pathNodePoints { get; private set; }
+    //public List<List<int>> pathEdges { get; private set; }
+    //public int[][] pathEdgePoints { get; private set; }
 
 
     // for creating to check for match
@@ -60,27 +64,43 @@ public class GridCase
         int _caseCount,
         Vector2 canvasOrigin, float canvasWidth, float canvasHeight, float cellSize,
         List<Polygon> obstacles, GridConnectivity gridConnectivity,
-        bool[,] _grid, List<Vector2> _pathNodes, List<List<int>> _pathEdges
+        bool[,] _grid,
+        List<List<int>> adjacencies
+        //List<Vector2> _pathNodes, List<List<int>> _pathEdges
 ) : this(_caseCount, canvasOrigin, canvasWidth, canvasHeight, cellSize, obstacles, gridConnectivity )
     {
 
         this.grid = _grid;
-        this.pathNodes = _pathNodes;
-        this.pathEdges = _pathEdges;
+        //this.pathNodes = _pathNodes;
+        //this.pathEdges = _pathEdges;
 
 
-        this.pathNodePoints = this.pathNodes.ToArray();
+        //this.pathNodePoints = this.pathNodes.ToArray();
 
 
-        this.pathEdgePoints = new int[this.pathEdges.Count][];
+        //this.pathEdgePoints = new int[this.pathEdges.Count][];
 
-        for(int i = 0; i < this.pathEdgePoints.Length; ++i)
+        //for(int i = 0; i < this.pathEdgePoints.Length; ++i)
+        //{
+        //    var pts = this.pathEdges[i];
+        //    this.pathEdgePoints[i] = new int[pts.Count];
+        //    for(int j = 0; j <  pts.Count; ++j)
+        //    {
+        //        this.pathEdgePoints[i][j] = pts[j];
+        //    }
+        //}
+
+        this.adjacencies = adjacencies;
+
+        this.adjacenciesRaw = new int[this.adjacencies.Count][];
+
+        for (int i = 0; i < this.adjacenciesRaw.Length; ++i)
         {
-            var pts = this.pathEdges[i];
-            this.pathEdgePoints[i] = new int[pts.Count];
-            for(int j = 0; j <  pts.Count; ++j)
+            var adj = this.adjacencies[i];
+            this.adjacenciesRaw[i] = new int[adj.Count];
+            for (int j = 0; j < adj.Count; ++j)
             {
-                this.pathEdgePoints[i][j] = pts[j];
+                this.adjacenciesRaw[i][j] = adj[j];
             }
         }
 
@@ -93,7 +113,7 @@ public class GridCase
         int _caseCount,
         Vector2 canvasOrigin, float canvasWidth, float canvasHeight, float cellSize,
         Vector2[][] obstaclePoints, GridConnectivity gridConnectivity,
-        char[][] gridMap, Vector2[] pathNodePts, int[][] pathEdgePts
+        char[][] gridMap, int[][] raw_adjs //Vector2[] pathNodePts, int[][] pathEdgePts
 )
     {
         this.caseCount = _caseCount;
@@ -118,23 +138,32 @@ public class GridCase
         this.obstacles = obstacles;
         //this.agentRadius = agentRadius;
 
-        this.pathNodePoints = pathNodePts;
+        //this.pathNodePoints = pathNodePts;
 
-        List<Vector2> pNodes = new List<Vector2>(pathNodePoints);
+        //List<Vector2> pNodes = new List<Vector2>(pathNodePoints);
 
-        this.pathNodes = pNodes;
+        //this.pathNodes = pNodes;
 
-        this.pathEdgePoints = pathEdgePts;
+        //this.pathEdgePoints = pathEdgePts;
 
-        List<List<int>> pEdges = new List<List<int>>();
+        //List<List<int>> pEdges = new List<List<int>>();
 
-        for (int i = 0; i < pathEdgePts.Length; ++i)
+        //for (int i = 0; i < pathEdgePts.Length; ++i)
+        //{
+        //    List<int> edges = new List<int>(pathEdgePts[i]);
+        //    pEdges.Add(edges);
+        //}
+        //this.pathEdges = pEdges;
+
+
+        List<List<int>> adjacencies = new List<List<int>>();
+
+        for (int i = 0; i < raw_adjs.Length; ++i)
         {
-            List<int> edges = new List<int>(pathEdgePts[i]);
-            pEdges.Add(edges);
+            List<int> adjs = new List<int>(raw_adjs[i]);
+            adjacencies.Add(adjs);
         }
-        this.pathEdges = pEdges;
-
+        this.adjacencies = adjacencies;
 
         // TODO fragile. no error checking currently...
 
@@ -313,22 +342,38 @@ public class GridCase
         sb.Append("}, " + nl);
 
 
-        sb.Append($"new Vector2[] {{");
-        foreach (var v in this.pathNodePoints)
-        {
-            sb.Append($"new Vector2({v.x}f, {v.y}f), ");
-        }
-        //sb.Append(nl);
-        sb.Append($"}}, " + nl);
+        //sb.Append($"new Vector2[] {{");
+        //foreach (var v in this.pathNodePoints)
+        //{
+        //    sb.Append($"new Vector2({v.x}f, {v.y}f), ");
+        //}
+        ////sb.Append(nl);
+        //sb.Append($"}}, " + nl);
+
+        //sb.Append($"new int[][] {{");
+
+        //foreach (var pe in this.pathEdgePoints)
+        //{
+        //    sb.Append($"new int[] {{");
+        //    foreach (var p in pe)
+        //    {
+        //        sb.Append($"{p}, ");
+        //    }
+        //    //sb.Append(nl);
+        //    sb.Append($"}}, " + nl);
+        //}
+
+        //sb.Append($"}});" + nl);
+
 
         sb.Append($"new int[][] {{");
 
-        foreach (var pe in this.pathEdgePoints)
+        foreach (var adj in this.adjacencies)
         {
             sb.Append($"new int[] {{");
-            foreach (var p in pe)
+            foreach (var a in adj)
             {
-                sb.Append($"{p}, ");
+                sb.Append($"{a}, ");
             }
             //sb.Append(nl);
             sb.Append($"}}, " + nl);

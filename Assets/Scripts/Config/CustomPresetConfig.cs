@@ -14,6 +14,7 @@ public class CustomPresetConfig : PresetConfig
         SceneConfigs.Add(SC4());
         SceneConfigs.Add(SC5());
         SceneConfigs.Add(SC6());
+        SceneConfigs.Add(SC7());
     }
 
     SceneConfig SC0()
@@ -255,6 +256,72 @@ public class CustomPresetConfig : PresetConfig
 
 
         return new SceneConfig(new Vector2(10f, 10f), origin, origin + new Vector2(-4f, -4f), 1f, obstacleConfigs, pathNodePositions, 10f, 0, 670238407);
+
+    }
+
+    SceneConfig SC7()
+    {
+
+        // Some setup showing how to place custom objects relative to the final canvasOrigin
+        float agentScale = 1f;
+        Vector2 worldSize = new Vector2(40f, 20f);
+        Vector2 halfWS = 0.5f * worldSize;
+        Vector2 origin = halfWS;
+        Vector2 canvasOrigin = Vector2.zero;
+
+
+        // Assume the canvasOrigin is 0,0 for now
+        ObstacleConfig[] obstacleConfigs =
+        {
+            new ObstacleConfig(ObstacleType.Custom, Vector2.zero, Vector2.one, 0f,
+                    new Vector2[] {
+                        new Vector2(0f, 0f),
+                        new Vector2(1f, 0f),
+                        new Vector2(1f, 20f),
+                        new Vector2(0f, 20f),                    
+                    }),
+
+            new ObstacleConfig(ObstacleType.Custom, Vector2.zero, Vector2.one, 0f,
+                    new Vector2[] {
+                        new Vector2(1f, 20f),
+                        new Vector2(1f, 19f),
+                        new Vector2(10f, 1f),
+                        new Vector2(11f, 1f),
+                        new Vector2(2f, 20f),
+                    }),
+
+            new ObstacleConfig(ObstacleType.Custom, Vector2.zero, Vector2.one, 0f,
+                    new Vector2[] {
+                        new Vector2(20f, 4f),
+                        new Vector2(22f, 4f),
+                        new Vector2(21f, 10f),
+                    }),
+
+                        new ObstacleConfig(ObstacleType.Custom, Vector2.zero, Vector2.one, 0f,
+                    new Vector2[] {
+                        new Vector2(12f, 15f),
+                        new Vector2(12f, 13f),
+                        new Vector2(30f, 14f),
+                    }),
+
+        };
+
+        // Adjust if the canvasOrigin isn't actually 0,0 
+        for (int i = 0; i < obstacleConfigs.Length; ++i)
+        {
+            obstacleConfigs[i].pos = obstacleConfigs[i].pos + canvasOrigin;
+        }
+
+
+        Vector2[] pathNodePositions = {
+        };
+
+        for (int i = 0; i < pathNodePositions.Length; ++i)
+            pathNodePositions[i] = pathNodePositions[i] + canvasOrigin;
+
+
+
+        return new SceneConfig(worldSize, origin, origin -halfWS + Vector2.one * 1.5f * agentScale, agentScale, obstacleConfigs, pathNodePositions, agentScale, 0, 670238407);
 
     }
 

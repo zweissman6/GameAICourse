@@ -22,6 +22,11 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
     //public Material LineMaterial;
     public Color LineColor = Color.green;
 
+    public GameObject pathNodePrefab;
+    List<GameObject> pathNodeObjects = new List<GameObject>();
+
+
+    public PathNetworkMode pathNetworkMode = PathNetworkMode.Predifined;
 
     public override void Awake()
     {
@@ -58,19 +63,19 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
     void Init()
     {
 
-        var PathNodeMarkersGroup = GameObject.Find(PathNodeMarkersGroupName);
+        //var PathNodeMarkersGroup = GameObject.Find(PathNodeMarkersGroupName);
 
-        if (PathNodeMarkersGroup != null)
-        {
+        //if (PathNodeMarkersGroup != null)
+        //{
 
-            PathNodeMarkers = new List<GameObject>(PathNodeMarkersGroup.transform.childCount);
+        //    PathNodeMarkers = new List<GameObject>(PathNodeMarkersGroup.transform.childCount);
 
-            for (int i = 0; i < PathNodeMarkersGroup.transform.childCount; ++i)
-            {
-                PathNodeMarkers.Add(PathNodeMarkersGroup.transform.GetChild(i).gameObject);
-            }
+        //    for (int i = 0; i < PathNodeMarkersGroup.transform.childCount; ++i)
+        //    {
+        //        PathNodeMarkers.Add(PathNodeMarkersGroup.transform.GetChild(i).gameObject);
+        //    }
 
-        }
+        //}
 
     }
 
@@ -147,12 +152,12 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
 
         Init();
 
-        PathNodes = new List<Vector2>(PathNodeMarkers.Count);
+        //PathNodes = new List<Vector2>(PathNodeMarkers.Count);
 
-        for (int i = 0; i < PathNodeMarkers.Count; i++)
-        {
-            PathNodes.Add(new Vector2(PathNodeMarkers[i].transform.position.x, PathNodeMarkers[i].transform.position.z));
-        }
+        //for (int i = 0; i < PathNodeMarkers.Count; i++)
+        //{
+        //    PathNodes.Add(new Vector2(PathNodeMarkers[i].transform.position.x, PathNodeMarkers[i].transform.position.z));
+        //}
 
         var obst = Obstacles.getObstacles();
 
@@ -195,8 +200,17 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
 
             //Debug.Log("PathNetwork: calling student code!");
 
+            // clone because we might refuse changes passed back from Create()
+            var pathNodes = new List<Vector2>(PathNodes);
+
             CreatePathNetwork.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
-                                        polys, moveBall.Radius, PathNodes, out pathEdges);
+                                        polys, moveBall.Radius, moveBall.Radius+0.001f, moveBall.Radius*2.5f, ref pathNodes, out pathEdges, pathNetworkMode);
+
+            if (pathNetworkMode == PathNetworkMode.PointsOfVisibility)
+            {
+                //accept overwrite
+                PathNodes = pathNodes;
+            }
 
             PathEdges = pathEdges;
 
@@ -220,6 +234,55 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
         PurgeOutdatedLineViz();
         CreateNetworkLines(Utils.ZOffset);
 
+        CreatePathNodeMarkerObjects(PathNodes);
+
+
+    }
+
+
+
+
+
+    void PurgeGroup(string gname)
+    {
+        var group = this.transform.Find(gname);
+
+        if (group != null)
+        {
+            group.name = "MARKED_FOR_DELETION";
+            group.gameObject.SetActive(false);
+            Destroy(group.gameObject);
+        }
+    }
+
+    void PurgeOutdatedPathNodeMarkers()
+    {
+        PurgeGroup(PathNodeMarkersGroupName);
+    }
+
+
+    void CreatePathNodeMarkerObjects(List<Vector2> pathNodes)
+    {
+
+        Debug.Log($"CreatePathNodeMarkerObjects(): num: {pathNodes.Count}");
+
+
+
+        PurgeOutdatedPathNodeMarkers();
+
+        var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathNodeMarkersGroupName);
+
+        bool ShowPathNodes = true;
+
+        if (ShowPathNodes)
+        {
+            foreach (Vector2 pn in pathNodes)
+            {
+                GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
+                pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
+                pathNodeObjects.Add(pno);
+            }
+        }
     }
 
 }
