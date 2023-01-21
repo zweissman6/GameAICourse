@@ -23,6 +23,8 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
     public Color LineColor = Color.green;
 
     public GameObject pathNodePrefab;
+    public GameObject pathNodeOutlinePrefab;
+
     List<GameObject> pathNodeObjects = new List<GameObject>();
 
 
@@ -53,6 +55,12 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
 
     }
 
+    public void ResetPathNodeMarkers()
+    {
+        PathNodeMarkers = null;
+        PurgeOutdatedPathNodeMarkers();
+    }
+
 
     //private void Update()
     //{
@@ -63,19 +71,32 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
     void Init()
     {
 
-        //var PathNodeMarkersGroup = GameObject.Find(PathNodeMarkersGroupName);
+        var PathNodeMarkersGroup = GameObject.Find(PathNodeMarkersGroupName);
 
-        //if (PathNodeMarkersGroup != null)
-        //{
+        if (PathNodeMarkersGroup != null)
+        {
 
-        //    PathNodeMarkers = new List<GameObject>(PathNodeMarkersGroup.transform.childCount);
+            if (PathNodeMarkersGroup.transform.childCount > 0)
+            {
 
-        //    for (int i = 0; i < PathNodeMarkersGroup.transform.childCount; ++i)
-        //    {
-        //        PathNodeMarkers.Add(PathNodeMarkersGroup.transform.GetChild(i).gameObject);
-        //    }
+                PathNodeMarkers = new List<GameObject>(PathNodeMarkersGroup.transform.childCount);
 
-        //}
+                for (int i = 0; i < PathNodeMarkersGroup.transform.childCount; ++i)
+                {
+                    PathNodeMarkers.Add(PathNodeMarkersGroup.transform.GetChild(i).gameObject);
+                }
+
+
+                PathNodes = new List<Vector2>(PathNodeMarkers.Count);
+
+                for (int i = 0; i < PathNodeMarkers.Count; i++)
+                {
+                    PathNodes.Add(new Vector2(PathNodeMarkers[i].transform.position.x, PathNodeMarkers[i].transform.position.z));
+                }
+
+            }
+
+        }
 
     }
 
@@ -201,7 +222,16 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
             //Debug.Log("PathNetwork: calling student code!");
 
             // clone because we might refuse changes passed back from Create()
-            var pathNodes = new List<Vector2>(PathNodes);
+            List<Vector2> pathNodes = null;
+
+            if (pathNetworkMode == PathNetworkMode.PointsOfVisibility)
+            {
+                pathNodes = new List<Vector2>();
+            }
+            else 
+            {
+                pathNodes = new List<Vector2>(PathNodes);
+            }
 
             CreatePathNetwork.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
                                         polys, moveBall.Radius, moveBall.Radius+0.001f, moveBall.Radius*2.5f, ref pathNodes, out pathEdges, pathNetworkMode);
@@ -272,17 +302,21 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
 
         var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathNodeMarkersGroupName);
 
-        bool ShowPathNodes = true;
 
-        if (ShowPathNodes)
+        GameObject prefab = pathNodePrefab;
+
+        if (HideBlockingDetails)
         {
-            foreach (Vector2 pn in pathNodes)
-            {
-                GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
-                pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
-                pathNodeObjects.Add(pno);
-            }
+            prefab = pathNodeOutlinePrefab;
         }
+        
+        foreach (Vector2 pn in pathNodes)
+        {
+            GameObject pno = Instantiate(prefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
+            pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
+            pathNodeObjects.Add(pno);
+        }
+        
     }
 
 }

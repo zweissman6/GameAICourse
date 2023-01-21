@@ -48,6 +48,8 @@ public class DiscretizedSpaceMonoBehavior : MonoBehaviour, IDiscretizedSpace
 
     public Material LineMaterial;        //Material used to draw the lines for the grid
 
+    public bool HideBlockingDetails = false; // like waypoints
+
 
 
     public virtual void Awake()

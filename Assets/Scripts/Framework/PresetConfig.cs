@@ -37,6 +37,8 @@ public class PresetConfig : MonoBehaviour
 
     protected List<SceneConfig> SceneConfigs = new List<SceneConfig>();
 
+    public bool AreObstaclesVisible = true;
+    public bool PrevObstaclesVisible = true;
 
     private void Start()
     {
@@ -147,7 +149,8 @@ public class PresetConfig : MonoBehaviour
                 Debug.Log("Config " + pos + " doesn't exist!");
             else
             {
-                return;
+                //return;
+                PrevObstaclesVisible = true;
             }
         }
 
@@ -188,13 +191,35 @@ public class PresetConfig : MonoBehaviour
 
                 Debug.Log($"Path Network mode is now set to: {pathNetwork.pathNetworkMode}");
                 LoadConfig(currConfig);
+
+                PrevObstaclesVisible = true;
             }
         }
 
 
-       if(Input.GetKeyUp(KeyCode.T))
+        if(Input.GetKeyUp(KeyCode.T))
         {
+            AreObstaclesVisible = !AreObstaclesVisible;
+
+            DiscretizedSpace.HideBlockingDetails = !DiscretizedSpace.HideBlockingDetails;
+
+            LoadConfig(currConfig);
+
+            PrevObstaclesVisible = true;
+
+        }
+
+        // A bit of a hack because after LoadConfig() obstacles are always visible (not really toggle-able)
+        if (!AreObstaclesVisible && PrevObstaclesVisible)
+        {
+            //Debug.Log("Hiding Obstacles!");
+            PrevObstaclesVisible = false;
             obstacles.ToggleModelsVisible();
+        }
+        else if(AreObstaclesVisible && !PrevObstaclesVisible)
+        {
+            //Debug.Log("Resetting prev obstacles visible");
+            PrevObstaclesVisible = true;
         }
 
     }
@@ -710,6 +735,7 @@ public class PresetConfig : MonoBehaviour
             if(numPathNodes > 0)
                 extraPathNodes = PlacePathNodes(numPathNodes, agentScale, seed);
 
+            pn.ResetPathNodeMarkers();
             pn.PathNodes = new List<Vector2>(pathNodes);
             pn.PathNodes.AddRange(extraPathNodes);
         }

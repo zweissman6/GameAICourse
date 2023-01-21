@@ -21,6 +21,7 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
     List<GameObject> pathNodeCentroidObjects = new List<GameObject>();
 
     public GameObject pathNodePrefab;
+    public GameObject pathNodeOutlinePrefab;
     public GameObject pathNodeCentroidPrefab;
     public Obstacle NavmeshPolygonPrefab;
 
@@ -232,11 +233,20 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
         var parent = Utils.FindOrCreateGameObjectByName(this.gameObject, PathNodeMarkersGroupName);
 
 
+        GameObject prefab = pathNodePrefab;
+
+        if (HideBlockingDetails)
+        {
+            prefab = pathNodeOutlinePrefab;
+        }
+
+
+
         if (ShowPathNodes)
         {
             foreach (Vector2 pn in pathNodes)
             {
-                GameObject pno = Instantiate(pathNodePrefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
+                GameObject pno = Instantiate(prefab, new Vector3(pn.x, Utils.ZOffset + 0.01f, pn.y), Quaternion.identity, parent.transform);
                 pno.transform.localScale = Vector3.one * 2f * moveBall.Radius;
                 pathNodeObjects.Add(pno);
             }
