@@ -33,7 +33,7 @@ namespace GameAICourse
         }
 
         // Helper method provided to help you implement this file. Leave as is.
-        // Returns Vector2 converted to Vector2Int according to default scaling factor (1000)
+        // Returns Vector2Int converted to Vector2 according to default scaling factor (1000)
         public static Vector2 ConvertToFloat(Vector2Int v)
         {
             float f = 1f / (float)CG.FloatToIntFactor;
@@ -42,10 +42,10 @@ namespace GameAICourse
 
         // Helper method provided to help you implement this file. Leave as is.
         // Returns int converted to float according to default scaling factor (1000)
-        public static int ConvertToFloat(int v)
+        public static float ConvertToFloat(int v)
         {
             float f = 1f / (float)CG.FloatToIntFactor;
-            return CG.Convert(v * f);
+            return v * f;
         }
 
 
