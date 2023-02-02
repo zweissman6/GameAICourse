@@ -4,6 +4,6 @@ using System;
 [Flags]
 public enum PathSearchVariantType
 {
-    ManhattanDistance,
-    //ClusterHeuristic
+    ManhattanDistance = 1,
+    //ClusterHeuristic=2
 };
