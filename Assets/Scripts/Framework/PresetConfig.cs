@@ -186,8 +186,8 @@ public class PresetConfig : MonoBehaviour
 
             if (Input.GetKeyUp(KeyCode.Period))
             {
-                pathNetwork.pathNetworkMode = pathNetwork.pathNetworkMode == PathNetworkMode.Predifined ?
-                    PathNetworkMode.PointsOfVisibility : PathNetworkMode.Predifined;
+                pathNetwork.pathNetworkMode = pathNetwork.pathNetworkMode == PathNetworkMode.Predefined ?
+                    PathNetworkMode.PointsOfVisibility : PathNetworkMode.Predefined;
 
                 Debug.Log($"Path Network mode is now set to: {pathNetwork.pathNetworkMode}");
                 LoadConfig(currConfig);

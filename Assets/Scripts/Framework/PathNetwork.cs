@@ -28,7 +28,7 @@ public class PathNetwork : DiscretizedSpaceMonoBehavior
     List<GameObject> pathNodeObjects = new List<GameObject>();
 
 
-    public PathNetworkMode pathNetworkMode = PathNetworkMode.Predifined;
+    public PathNetworkMode pathNetworkMode = PathNetworkMode.Predefined;
 
     public override void Awake()
     {

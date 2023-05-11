@@ -96,7 +96,7 @@ namespace GameAICourse
 
 
 
-        // Create(): Creates a navmesh and pathnetwork (associated with navmesh) 
+        // Create(): Creates a navmesh and path graph (associated with navmesh) 
         // canvasOrigin: bottom left corner of navigable region in world coordinates
         // canvasWidth: width of navigable region in world dimensions
         // canvasHeight: height of navigable region in world dimensions
@@ -104,17 +104,16 @@ namespace GameAICourse
         // agentRadius: the radius of the agent
         // offsetObst: out param of the complex expanded obstacles for visualization purposes
         // origTriangles: out param of the triangles that are used for navmesh generation
-        //          These triangles are passed out for visualization.
+        //          These triangles are passed out for validation and visualization.
         // navmeshPolygons: out param of the convex polygons of the navmesh (list). 
-        //          These polys are passed out for visualization
-        // adjPolys: out param of type AdjacentPolygons. These are used by autograder
-        //          to assess your work
-        // pathNodes: a list of graph nodes, centered on each navmeshPolygon
-        // pathEdges: graph adjacency list for each graph node. cooresponding index of pathNodes to match
-        //      node with its edge list. All nodes must have an edge list (no null list)
+        //          These polys are passed out for validation and visualization
+        // adjPolys: out param of type AdjacentPolygons. These are used validation
+        // pathNodes: a list of graph nodes (either centered on portal edges or navmesh polygon, depending
+        //                        on assignment requirements)
+        // pathEdges: graph adjacency list for each node. Cooresponding index of pathNodes match
+        //      a node with its edge list. All nodes must have an edge list (no null list)
         //      entries in each edge list are indices into pathNodes
         // 
-
         public static void Create(
         Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
             List<Polygon> obstacles, float agentRadius,
@@ -222,7 +221,6 @@ namespace GameAICourse
                         var V2 = obstacleVertices[j];
                         var V3 = obstacleVertices[k];
 
-
                         // TODO This inner loop involves tasks for you to implement
 
                         // TODO first lets check if the candidate triangle
@@ -239,7 +237,7 @@ namespace GameAICourse
                         // What you need to do is first determine which of the 3 tri edges
                         // are edges of an obstacle polygon via IsLineSegmentInPolygons().
                         //
-                        // ** Make sure you use offsetObstPolys any time you need to check
+                        // *** Make sure you use offsetObstPolys any time you need to check
                         // against obstacles ***
                         //
                         // Be sure to store these IsLineSegmentInPolygons() test results in vars 
@@ -253,7 +251,7 @@ namespace GameAICourse
                         // Use Between() to test each obstacle vertex against the candidate
                         // triangle edge. This test is important to get right because
                         // it will stop triangles from forming that block adjacencies from forming.
-                        // If there is a vertex Between(), then continue to the next.
+                        // If there is a vertex Between(), then "continue" to the next Triangle.
                         // (Note: that if a tri edge is true for IsLineSegmentInPolygons() that it
                         // can still be valid. It's just impossible for the Between() test
                         // to fail. So we skip that step for efficiency.)
@@ -302,6 +300,7 @@ namespace GameAICourse
 
             // Priming the navmeshPolygons for next steps, and also allow visualization
             navmeshPolygons = new List<Polygon>(origTriangles);
+
             // TODO If you completed all of the triangle generation above, 
             // you can just return from the Create() method here to test what you have
             // accomplished so far. The originalTriangles
@@ -352,23 +351,25 @@ namespace GameAICourse
             // Similar to the updates to newAdjPolys, you also want to remove old polys
             // and add the new poly to navMeshPolygons.
             // When your loop is finished, don't forget to set adjPolys to newAdjPolys.
+            // If you don't do the last step then it won't appear that you have done any merging.
 
             // TODO At this point you can visualize a single pass of the merging (e.g. test your
             // code). After that, wrap it all in a loop that tries successive passes of
             // merges, tracking how many successful merges occur. Your loop should terminate
             // when no merges are successful. Given that we only make a shallow copy,
             // a single pass through will create convex polygons possibly larger than 4 sides.
-            // It is possibly impossible for more than one pass to be needed. 
+            // It is possibly impossible for more than one pass to be needed.
+            // Be sure you see the blue lines disappear along edges where mergers occured.
 
 
             // *********************** PHASE 3 - Path Network from NavMesh *********************
 
-            // The last step is to create a PathNetwork from your navMesh
+            // The last step is to create a Path Graph from your navMesh
             // This will involve iterating over the keys of adjPolys so you can get the 
             // CommonPolygons values.
             //
             // Issues you need to address are:
-            // 1.) Calculate centroids of each portal edge to be your pathNodes
+            // 1.) Calculate midpoints of each portal edge to be your pathNodes
             // 2.) Implement a method for mapping Polygons each to a list of CommonPolygonEdges,
             //      and mapping CommonPolygonEdges to path node indexes (ints)
             //
@@ -379,15 +380,15 @@ namespace GameAICourse
 
             // ***************************** FINAL **********************************************
             // Once you have completed everything, you will probably find that the code
-            // is very slow. It can be sped up a good bit by creating hashtables of common calculations. 
+            // is very slow. It can be sped up a good bit by creating hashtables of common calculations.
+            // This is not required though. 
+            //
             // Also, there are better ways to triangulate that perform better and give
             // better quality triangles (not long and skinny but closer to equilateral).
+            // However, you don't need to worry about implementing this.
             // 
 
         } // Create()
-
-
-
 
 
     }

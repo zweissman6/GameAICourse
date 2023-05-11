@@ -50,7 +50,7 @@ namespace Tests
 
             //Execute your code!
 
-            CreatePathNetwork.Create(origin, size.x, size.y, obstacles, agentRadius, agentRadius+0.01f, agentRadius*2.5f, ref pathNodes, out pathEdges, PathNetworkMode.Predifined);
+            CreatePathNetwork.Create(origin, size.x, size.y, obstacles, agentRadius, agentRadius+0.01f, agentRadius*2.5f, ref pathNodes, out pathEdges, PathNetworkMode.Predefined);
 
             //Various assertions to validate your returned result
 
