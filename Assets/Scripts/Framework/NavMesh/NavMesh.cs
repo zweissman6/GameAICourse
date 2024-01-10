@@ -31,6 +31,7 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
     public bool ShowPathNodes = true;
 
+    public bool DisableGeometryExpansion = false;
 
     public override void Awake()
     {
@@ -73,14 +74,23 @@ public class NavMesh : DiscretizedSpaceMonoBehavior
 
         //Debug.Log("NavMesh: calling student code!");
 
-        CreateNavMesh.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
-            Obstacles.GetObstaclePolygons(), moveBall.Radius,
-            out offsetObst,
-            out VisualizeOriginalTriangles,
-            out VisualizeNavMeshPolygons,
-            out adjPolys,
-            out pnodes, out pedges
+        float agentRadius = moveBall.Radius;
+
+        if(DisableGeometryExpansion)
+            agentRadius = 0f;
+
+        offsetObst = Utils.GenerateExpandedGeometry(
+            BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
+            agentRadius, Obstacles.GetObstaclePolygons()
             );
+
+        CreateNavMesh.Create(BottomLeftCornerWCS, Boundary.size.x, Boundary.size.z,
+                offsetObst, agentRadius,
+                out VisualizeOriginalTriangles,
+                out VisualizeNavMeshPolygons,
+                out adjPolys,
+                out pnodes, out pedges
+                );
 
         PathNodes = pnodes;
         PathEdges = pedges;

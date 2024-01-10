@@ -145,6 +145,44 @@ public class Utils : MonoBehaviour
     }
 
 
+    public static List<Polygon> GenerateExpandedGeometry(
+        Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
+        float agentRadius, List<Polygon> obstacles)
+    {
+
+        List<Polygon> offsetObstPolys;
+
+
+        // TODO this has known difficiency of not identifying holes in a usable way
+        // However, point inside test algorithm can't work with holes anyways.
+        // To fix would require addressing both issues simultaneously
+
+        Utils.GenerateOffsetNavSpace(canvasOrigin, canvasWidth, canvasHeight,
+           agentRadius, obstacles, out offsetObstPolys);
+
+        List<Polygon> tmp = new List<Polygon>(offsetObstPolys);
+
+        // We currently don't support holes, but we can remove them. Holes
+        // might form from union of polys, or expansion of concave polys.
+        // There could be a hole with another poly inside, possibly repeating recursively.
+        // In this case, removing holes will leave overlapping polys, but this shouldn't have
+        // any bad effect other than wasted computation.
+        for (int i = offsetObstPolys.Count - 1; i >= 0; --i)
+        {
+            var p = offsetObstPolys[i];
+            if (!CG.Ccw(p.getIntegerPoints()))
+            {
+                Debug.Log("*** Removed a hole from obstacles! ***");
+                offsetObstPolys.Remove(p);
+            }
+        }
+
+        Debug.Log($"offset obstacle count: {offsetObstPolys.Count}");
+
+        return offsetObstPolys;
+
+    }
+
 
     public static void GenerateOffsetNavSpace(Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
         float agentRadius,
@@ -162,8 +200,14 @@ public class Utils : MonoBehaviour
 
         ClipperHelper.ClipperUnion(clipperPolys, out pUnion);
 
-        ClipperHelper.ClipperExpand(pUnion, agentRadius, out pExpanded);
-        //ClipperHelper.ClipperExpandNoUnion(clipperPolys, agentRadius, out pExpanded);
+        if (agentRadius > 0f)
+        {
+            ClipperHelper.ClipperExpand(pUnion, agentRadius, out pExpanded);
+            //ClipperHelper.ClipperExpandNoUnion(clipperPolys, agentRadius, out pExpanded);
+        } else
+        {
+            pExpanded = pUnion;
+        }
 
         ClipperPaths cBoundary;
 
@@ -171,7 +215,14 @@ public class Utils : MonoBehaviour
 
         ClipperPaths offsetBoundary;
 
-        ClipperHelper.ClipperExpand(cBoundary, -agentRadius, out offsetBoundary);
+        if (agentRadius > 0f)
+        {
+            ClipperHelper.ClipperExpand(cBoundary, -agentRadius, out offsetBoundary);
+        }
+        else
+        {
+            offsetBoundary = cBoundary;
+        }
 
         ClipperPaths pFinal;
 

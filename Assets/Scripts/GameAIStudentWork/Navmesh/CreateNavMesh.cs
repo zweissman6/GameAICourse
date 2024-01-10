@@ -100,14 +100,14 @@ namespace GameAICourse
         // canvasOrigin: bottom left corner of navigable region in world coordinates
         // canvasWidth: width of navigable region in world dimensions
         // canvasHeight: height of navigable region in world dimensions
-        // obstacles: a list of Polygons that are obstacles in the scene
+        // obstacles: a list of CCW Polygons that are obstacles in the scene. These are already expanded
+        //          and clipped to the canvas. No holes are present in the polygons, but are possibly concave.
         // agentRadius: the radius of the agent
-        // offsetObst: out param of the complex expanded obstacles for visualization purposes
         // origTriangles: out param of the triangles that are used for navmesh generation
         //          These triangles are passed out for validation and visualization.
         // navmeshPolygons: out param of the convex polygons of the navmesh (list). 
-        //          These polys are passed out for validation and visualization
-        // adjPolys: out param of type AdjacentPolygons. These are used validation
+        //          These polys are passed out for validation and visualization and should be merged.
+        // adjPolys: out param of type AdjacentPolygons. These are used validation and should be merged.
         // pathNodes: a list of graph nodes (either centered on portal edges or navmesh polygon, depending
         //                        on assignment requirements)
         // pathEdges: graph adjacency list for each node. Cooresponding index of pathNodes match
@@ -117,7 +117,6 @@ namespace GameAICourse
         public static void Create(
         Vector2 canvasOrigin, float canvasWidth, float canvasHeight,
             List<Polygon> obstacles, float agentRadius,
-            out List<Polygon> offsetObst,
             out List<Polygon> origTriangles,
             out List<Polygon> navmeshPolygons,
             out AdjacentPolygons adjPolys,
@@ -139,40 +138,10 @@ namespace GameAICourse
             // the pathNetwork on top of the navmesh
             adjPolys = new AdjacentPolygons();
 
-            // Holds the complex set of polys representing obstacle boundaries
-            // Any time you need to test against obstacles, use offsetObstPolys
-            // instead of obstacles
-            List<Polygon> offsetObstPolys;
-
-            // This creates a complex set of polygons representing the obstacle boundaries.
-            // It's built with a 3rd party library called Clipper. In addition
-            // to finding the union of obstacle boundaries, and clipping against the canvas, 
-            // it also performs expansion for agentOffset
-            Utils.GenerateOffsetNavSpace(canvasOrigin, canvasWidth, canvasHeight,
-               agentRadius, obstacles, out offsetObstPolys);
-
-
-            List<Polygon> tmp = new List<Polygon>(offsetObstPolys);
-
-            // We currently don't support holes, but we can remove them. Holes
-            // might form from union of polys, or (more rarely) expansion of concave polys.
-            // There could be a hole with another poly inside, possibly repeating recursively.
-            // In this case, removing holes will leave overlapping polys, but this shouldn't have
-            // any bad effect other than wasted computation.
-            foreach (var p in tmp)
-            {
-                if (!IsCCW(p.getIntegerPoints()))
-                {
-                    Debug.Log("*** Removed a hole from obstacles! ***");
-                    offsetObstPolys.Remove(p);
-                }
-            }
-
-            offsetObst = offsetObstPolys; // out param for viz
 
             // Obtain all the vertices that are going to be used to form our triangles
             List<Vector2Int> obstacleVertices;
-            Utils.AllVerticesFromPolygons(offsetObstPolys, out obstacleVertices);
+            Utils.AllVerticesFromPolygons(obstacles, out obstacleVertices);
 
             // Let's also add the four corners of the canvas (with offset)
             var A = canvasOrigin + new Vector2(agentRadius, agentRadius);
@@ -235,16 +204,13 @@ namespace GameAICourse
                         // from forming because navmesh poly adjacency can only occur via a 
                         // common edge (not coincident edges with different vertices).
                         // What you need to do is first determine which of the 3 tri edges
-                        // are edges of an obstacle polygon via IsLineSegmentInPolygons().
-                        //
-                        // *** Make sure you use offsetObstPolys any time you need to check
-                        // against obstacles ***
+                        // are edges of an obstacle polygon via IsLineSegmentInPolygons().                     
                         //
                         // Be sure to store these IsLineSegmentInPolygons() test results in vars 
                         // since the test is expensive and you need the info later.
                         // After that, each tri edge that is NOT a line/edge in a poly
                         // should be checked further to see if there are any obstacle vertices
-                        // that are ON the tri edge and BETWEEN the start and end point.
+                        // that are ON the line formed by the tri edge and BETWEEN the start and end point.
                         // You need to test against all obstacleVertices EXCEPT your two triangle
                         // edge endpoints. You will probably want to write a helper method
                         // to do this separately with the three candidate triangle edges.
@@ -254,7 +220,7 @@ namespace GameAICourse
                         // If there is a vertex Between(), then "continue" to the next Triangle.
                         // (Note: that if a tri edge is true for IsLineSegmentInPolygons() that it
                         // can still be valid. It's just impossible for the Between() test
-                        // to fail. So we skip that step for efficiency.)
+                        // to fail. So we skip unnecessary Between() tests for efficiency.)
 
 
                         // TODO If the tri candidate has gotten this far, now create
@@ -272,7 +238,7 @@ namespace GameAICourse
                         // obstacleVertices. Use IsPointInsidePolygon() to accomplish this.
                         // If you get a hit, call continue to pass on the tri.
                         // THEN, you need to check for the possibility that the tri
-                        // is exactly an obstacle polygon (of offsetObstPolys). triPoly.Equals() can be
+                        // is exactly an obstacle polygon. triPoly.Equals() can be
                         // used. You can check out the implementation to see that it
                         // correctly compares any vertex ordering of the same winding.
                         // NOTE both of these are very rare tests to be successful.
@@ -286,7 +252,7 @@ namespace GameAICourse
                         // determine whether you should then call
                         // InteriorIntersectionLineSegmentWithPolygons(). If this test intersects,
                         // this skip the tri by calling continue.
-
+                        
 
                         // TODO If the triangle has survived this far, add it to 
                         // origTriangles.
@@ -358,7 +324,8 @@ namespace GameAICourse
             // merges, tracking how many successful merges occur. Your loop should terminate
             // when no merges are successful. Given that we only make a shallow copy,
             // a single pass through will create convex polygons possibly larger than 4 sides.
-            // It is possibly impossible for more than one pass to be needed.
+            // It is possibly impossible for more than one pass to be needed, but the
+            // attempt at extra passes doesn't hurt.
             // Be sure you see the blue lines disappear along edges where mergers occured.
 
 
@@ -381,7 +348,8 @@ namespace GameAICourse
             // ***************************** FINAL **********************************************
             // Once you have completed everything, you will probably find that the code
             // is very slow. It can be sped up a good bit by creating hashtables of common calculations.
-            // This is not required though. 
+            // This is not required though. (The biggest cause of major slowdowns
+            // is print statement within inner loops. So be sure to remove.)
             //
             // Also, there are better ways to triangulate that perform better and give
             // better quality triangles (not long and skinny but closer to equilateral).

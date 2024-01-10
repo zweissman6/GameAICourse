@@ -58,7 +58,7 @@ public class CommonPolygons
     // with floating point nav mesh building. It is now much more robust and all the
     // degenerate if-clauses *should* get skipped. The degenerate stuff probably
     // needs to be deleted!
-    // That said, the whole reason the code is their is because a degenerate triangle
+    // That said, the whole reason the code is there is because a degenerate triangle
     // can be flipped AB or BA direction pretty easily. This allows degenerates to
     // "glue" paths together that would otherwise not form.
 
