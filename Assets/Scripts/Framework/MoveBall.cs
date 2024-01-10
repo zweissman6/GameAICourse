@@ -544,7 +544,7 @@ public class MoveBall : MonoBehaviour, IBallMover
                             break;
                         }
                         //else if(Utils.Intersects(v,n, o.GetPolygon()))
-                        else if (CG.IntersectionLineSegmentWithPolygon(vint, nint, o.GetIntegerPoints()))
+                        else if (InternalHelper.IntersectionLineSegmentWithPolygon(vint, nint, o.GetIntegerPoints()))
                         {
                             //Debug.Log("No line of sight");
                             goodPoint = false;
