@@ -7,7 +7,6 @@ public class Polygon : IEquatable<Polygon>
 {
     Vector2[] points;       //list of all points in the polygon
     Vector2Int[] intPoints;
-    Vector2[,] lines;
     Vector2 minBounds, maxBounds;
     Vector2Int minIntBounds, maxIntBounds;
     Vector2 centroid;
@@ -49,7 +48,6 @@ public class Polygon : IEquatable<Polygon>
         CreateIntPointsFromPoints();
         CalculateBounds();
         
-        CreateLines();
         CalculateCentroid();
     }
     public void SetPoints(Vector2[] newPoints)
@@ -57,7 +55,6 @@ public class Polygon : IEquatable<Polygon>
         points = newPoints;
         CreateIntPointsFromPoints();
         CalculateBounds();
-        CreateLines();
         CalculateCentroid();
 
     }
@@ -67,7 +64,6 @@ public class Polygon : IEquatable<Polygon>
         intPoints = newPoints;
         CreatePointsFromIntPoints();
         CalculateBounds();
-        CreateLines();
         CalculateCentroid();
     }
 
@@ -95,15 +91,6 @@ public class Polygon : IEquatable<Polygon>
         intPoints = CG.Convert(points);
     }
 
-    void CreateLines()
-    {
-        lines = new Vector2[points.Length, 2];
-        for (int i = 0; i < points.Length; i++)
-        {
-            lines[i, 0] = points[i];
-            lines[i, 1] = points[(i + 1) % points.Length];
-        }
-    }
     public Vector2 GetCentroid()
     {
         return centroid;

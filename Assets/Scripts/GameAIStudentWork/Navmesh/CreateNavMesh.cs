@@ -26,6 +26,30 @@ namespace GameAICourse
         }
 
         // Helper method provided to help you implement this file. Leave as is.
+        // Returns float converted to int according to default scaling factor (1000)
+        public static int Convert(float v)
+        {
+            return CG.Convert(v);
+        }
+
+        // Helper method provided to help you implement this file. Leave as is.
+        // Returns Vector2Int converted to Vector2 according to default scaling factor (1000)
+        public static Vector2 ConvertToFloat(Vector2Int v)
+        {
+            float f = 1f / (float)CG.FloatToIntFactor;
+            return new Vector2(v.x * f, v.y * f);
+        }
+
+        // Helper method provided to help you implement this file. Leave as is.
+        // Returns int converted to float according to default scaling factor (1000)
+        public static float ConvertToFloat(int v)
+        {
+            float f = 1f / (float)CG.FloatToIntFactor;
+            return v * f;
+        }
+
+
+        // Helper method provided to help you implement this file. Leave as is.
         // Returns true if point p is inside (but not on edge) the polygon defined by pts (CCW winding). False, otherwise
         public static bool IsPointInsidePolygon(Vector2Int[] pts, Vector2Int p)
         {
