@@ -38,14 +38,14 @@ namespace GameAICourse {
         }
 
         // Helper method provided to help you implement this file. Leave as is.
-        // Returns true is segment AB intersects CD properly or improperly
+        // Returns true if segment AB intersects CD properly or improperly
         static bool Intersects(Vector2Int a, Vector2Int b, Vector2Int c, Vector2Int d)
         {
             return CG.Intersect(a, b, c, d);
         }
 
 
-        // IsPointInsideBoundingBox(): Determines whether a point (Vector2Int:p) is On/Inside a bounding box (such as a grid cell) defined by
+        // IsPointInsideAxisAlignedBoundingBox(): Determines whether a point (Vector2Int:p) is On/Inside a bounding box (such as a grid cell) defined by
         // minCellBounds and maxCellBounds (both Vector2Int's).
         // Returns true if the point is ON/INSIDE the cell and false otherwise
         // This method should return true if the point p is on one of the edges of the cell.
@@ -72,7 +72,7 @@ namespace GameAICourse {
             return true;
         }
 
-        // IsAxisAlignedBouningBoxOverlapping(): Determines if the AABBs defined by min1,max1 and min2,max2 overlap or touch
+        // IsAxisAlignedBoundingBoxOverlapping(): Determines if the AABBs defined by min1,max1 and min2,max2 overlap or touch
         // Returns true if overlap, false otherwise.
         // Preconditions: min1 <= max1, per dimension. min2 <= max2 per dimension
         static bool IsAxisAlignedBoundingBoxOverlapping(Vector2Int min1, Vector2Int max1, Vector2Int min2, Vector2Int max2)
