@@ -1,5 +1,4 @@
-﻿// compile_check
-// Remove the line above if you are subitting to GradeScope for a grade. But leave it if you only want to check
+﻿// Remove the line above if you are subitting to GradeScope for a grade. But leave it if you only want to check
 // that your code compiles and the autograder can access your public methods.
 
 using System.Collections;
@@ -12,7 +11,7 @@ namespace GameAICourse {
     {
 
         // Please change this string to your name
-        public const string StudentAuthorName = "George P. Burdell ← Not your name, change it!";
+        public const string StudentAuthorName = "Zachary Weissman";
 
 
         // Helper method provided to help you implement this file. Leave as is.
@@ -53,10 +52,7 @@ namespace GameAICourse {
         // Preconditions: minCellBounds <= maxCellBounds, per dimension
         static bool IsPointInsideAxisAlignedBoundingBox(Vector2Int minCellBounds, Vector2Int maxCellBounds, Vector2Int p)
         {
-            //TODO IMPLEMENT
-
-            // placeholder logic to be replaced by the student
-            return true;
+            return p.x >= minCellBounds.x && p.x <= maxCellBounds.x && p.y >= minCellBounds.y && p.y <= maxCellBounds.y;
         }
 
 
@@ -68,8 +64,7 @@ namespace GameAICourse {
         // Preconditions: min1 <= max1 AND min2 <= max2
         static bool IsRangeOverlapping(int min1, int max1, int min2, int max2)
         {
-            // TODO IMPLEMENT
-            return true;
+            return !(max1 < min2 || max2 < min1);
         }
 
         // IsAxisAlignedBoundingBoxOverlapping(): Determines if the AABBs defined by min1,max1 and min2,max2 overlap or touch
@@ -78,10 +73,7 @@ namespace GameAICourse {
         static bool IsAxisAlignedBoundingBoxOverlapping(Vector2Int min1, Vector2Int max1, Vector2Int min2, Vector2Int max2)
         {
 
-            // TODO IMPLEMENT
-            // HINT: Call IsRangeOverlapping()
-
-            return true;
+            return IsRangeOverlapping(min1.x, max1.x, min2.x, max2.x) && IsRangeOverlapping(min1.y, max1.y, min2.y, max2.y);
         }
 
 
@@ -96,11 +88,36 @@ namespace GameAICourse {
         // Note: public methods are autograded
         public static bool IsTraversable(bool[,] grid, int x, int y, TraverseDirection dir)
         {
+            //edge cases
+            if (grid == null || grid.Rank != 2) return false;
+            int sizeX = grid.GetLength(0);
+            int sizeY = grid.GetLength(1);
+            if (sizeX == 0 || sizeY == 0) return false;
+            if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) return false;
+            if (!grid[x, y]) return false;
 
-            // TODO IMPLEMENT
+            //directions
+            int dx = 0;
+            int dy = 0;
+            switch (dir)
+            {
+                case TraverseDirection.Up: dy = 1; break;
+                case TraverseDirection.Down: dy = -1; break;
+                case TraverseDirection.Left: dx = -1; break;
+                case TraverseDirection.Right: dx = 1; break;
+                case TraverseDirection.UpLeft: dx = -1; dy = 1; break;
+                case TraverseDirection.UpRight: dx = 1; dy = 1; break;
+                case TraverseDirection.DownLeft: dx = -1; dy = -1; break;
+                case TraverseDirection.DownRight: dx = 1; dy = -1; break;
+                default: return false;
+            }
+            int newX = x + dx;
+            int newY = y + dy;
 
-            //placeholder logic to be replaced by the student
-            return true;
+            //check boundaries
+            if (newX < 0 || newY < 0 || newX >= sizeX || newY >= sizeY) return false;
+
+            return grid[newX, newY];
         }
 
 
@@ -124,11 +141,94 @@ namespace GameAICourse {
 
             // also ignoring the world boundary defined by canvasOrigin and canvasWidth and canvasHeight
 
+            //grid sizes
+            int gridSizeX = Mathf.Max(1, Mathf.FloorToInt(canvasWidth / cellWidth));
+            int gridSizeY = Mathf.Max(1, Mathf.FloorToInt(canvasHeight / cellWidth));
 
-            grid = new bool[1, 1];
-            grid[0, 0] = true;
+            grid = new bool[gridSizeX, gridSizeY];
+
+            //shrink
+            Vector2Int shrink = new Vector2Int(1, 1);
 
 
+            //iterate over all cells
+            for (int ix = 0; ix < gridSizeX; ix++)
+            {
+                for (int iy = 0; iy < gridSizeY; iy++)
+                {
+                    Vector2 cellMinWorld = new Vector2(canvasOrigin.x + ix * cellWidth, canvasOrigin.y + iy * cellWidth);
+                    Vector2 cellMaxWorld = new Vector2(canvasOrigin.x + (ix + 1) * cellWidth, canvasOrigin.y + (iy + 1) * cellWidth);
+                    Vector2Int cellMin = Convert(cellMinWorld);
+                    Vector2Int cellMax = Convert(cellMaxWorld);
+                    //shrink aabbs for interior not edges
+                    Vector2Int innerMin = new Vector2Int(cellMin.x + shrink.x, cellMin.y + shrink.y);
+                    Vector2Int innerMax = new Vector2Int(cellMax.x - shrink.x, cellMax.y - shrink.y);
+                    if (innerMin.x > innerMax.x) innerMin.x = innerMax.x = (cellMin.x + cellMax.x) / 2;
+                    if (innerMin.y > innerMax.y) innerMin.y = innerMax.y = (cellMin.y + cellMax.y) / 2;
+
+                    //box corners:
+                    Vector2Int a = innerMin;
+                    Vector2Int b = new Vector2Int(innerMax.x, innerMin.y);
+                    Vector2Int c = innerMax;
+                    Vector2Int d = new Vector2Int(innerMin.x, innerMax.y);
+                    //center
+                    Vector2Int center = new Vector2Int((innerMin.x + innerMax.x) / 2, (innerMin.y + innerMax.y) / 2);
+
+                    //set up obstacle blockages:
+                    bool blocked = false;
+                    if (obstacles != null && obstacles.Count > 0)
+                    {
+                        for (int oi = 0; oi < obstacles.Count && !blocked; oi++)
+                        {
+                            Polygon poly = obstacles[oi];
+                            Vector2Int omin = poly.MinIntBounds;
+                            Vector2Int omax = poly.MaxIntBounds;
+                            //compare obstacleAABB to shrunkencell AABB
+                            if (!IsAxisAlignedBoundingBoxOverlapping(innerMin, innerMax, omin, omax))
+                            {
+                                continue;
+                            }
+                            //compare polygon points to shrunken cell (obstacle is inside cell)
+                            Vector2Int[] pts = poly.getIntegerPoints();
+                            for (int k = 0; k < pts.Length && !blocked; k++)
+                            {
+                                if (IsPointInsideAxisAlignedBoundingBox(innerMin, innerMax, pts[k]))
+                                {
+                                    blocked = true;
+                                    break;
+                                }
+                            }
+                            //compare shrunken cell corners/center to polygon (obstacles takes up cell)
+                            if (!blocked)
+                            {
+                                if (IsPointInsidePolygon(pts, a) || IsPointInsidePolygon(pts, b) || IsPointInsidePolygon(pts, c) || IsPointInsidePolygon(pts, d) || IsPointInsidePolygon(pts, center))
+                                {
+                                    blocked = true;
+                                }
+                            }
+                            //compare polygon edges to shrunken cell edges
+                            if (!blocked)
+                            {
+                                Vector2Int edge1a = a, edge1b = b; //edge 1: a to b
+                                Vector2Int edge2a = b, edge2b = c; //edge 2: b to c
+                                Vector2Int edge3a = c, edge3b = d; //edge 3: c to d
+                                Vector2Int edge4a = d, edge4b = a; //edge 4: d to a
+                                for (int k = 0; k < pts.Length && !blocked; k++)
+                                {
+                                    Vector2Int p0 = pts[k];
+                                    Vector2Int p1 = pts[(k + 1) % pts.Length];
+                                    if (Intersects(p0, p1, edge1a, edge1b) || Intersects(p0, p1, edge2a, edge2b) || Intersects(p0, p1, edge3a, edge3b) || Intersects(p0, p1, edge4a, edge4b))
+                                    {
+                                        blocked = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    grid[ix, iy] = !blocked;
+                }
+            }
         }
 
     }
